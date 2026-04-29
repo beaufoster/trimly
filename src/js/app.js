@@ -65,7 +65,7 @@ function updateHeroGreeting(){
 
 // ══ DEMO MODE ═══════════════════════════════════════
 function loadDemo(){
-  $('cw').value=218;$('gw').value=180;$('age').value=34;$('ht').value=69;$('sex').value='male';
+  $('cw').value=218;$('gw').value=180;$('age').value=34;$('ht-ft').value=5;$('ht-in').value=9;$('sex').value='male';
   $('calSl').value=1750;$('walkSl').value=45;$('liftSl').value=3;$('cardioSl').value=2;$('actSl').value=2;
   // Add 3 demo check-ins
   const today=new Date();
@@ -337,11 +337,11 @@ function renderProgressSnap(){
   if(diff>0.5){bCls='ahead';bTxt='🔥 Ahead!';}
   else if(diff>=-1.0){bCls='close';bTxt='👍 Almost There';}
   else{bCls='behind';bTxt='Keep Going 💪';}
-  $('snap-start').textContent=startWt+' lbs';
-  $('snap-current').textContent=latest.weight+' lbs';
+  $('snap-start').textContent=fmtD(startWt)+' lbs';
+  $('snap-current').textContent=fmtD(latest.weight)+' lbs';
   $('snap-lost').textContent=(actualLost>=0?'-':'+')+Math.abs(actualLost)+' lbs';
-  $('snap-start-lbl').textContent=startWt+' lbs';
-  $('snap-goal-lbl').textContent=goalWt+' lbs';
+  $('snap-start-lbl').textContent=fmtD(startWt)+' lbs';
+  $('snap-goal-lbl').textContent=fmtD(goalWt)+' lbs';
   $('snap-pct').textContent=Math.round(pctDone)+'%';
   $('snap-fill').style.width=pctDone+'%';
   $('snap-proj-marker').style.left=projPct+'%';
@@ -371,7 +371,7 @@ function simulateLoss(startWt,goalWt,calIntake,exPerDay,actMult,age,ht,sex,maxLb
 function calculate(){
   const cw=parseFloat($('cw').value)||210;
   const age=parseInt($('age').value)||35;
-  const ht=parseFloat($('ht').value)||70;
+  const ht=((parseInt($('ht-ft').value)||5)*12)+(parseInt($('ht-in').value)||10);
   const sex=$('sex').value;
   const cal=parseInt($('calSl').value);
   const walk=parseInt($('walkSl').value);
@@ -407,7 +407,7 @@ function calculate(){
     }
     const projWt=+wtS.toFixed(1);
     const totalLost=+(cw-projWt).toFixed(1);
-    const avgRate=+(totalLost/weeksAvail).toFixed(2);
+    const avgRate=+(totalLost/weeksAvail).toFixed(1);
     $('r-weeks').textContent=projWt+' lbs';
     $('r-weeks-lbl').textContent=`in ${weeksAvail} wks`;
     const gds=targetDate.toISOString();
@@ -419,8 +419,8 @@ function calculate(){
   }
 
   const gw=parseFloat($('gw').value)||175;
-  const totalLoss=Math.max(cw-gw,0);
-  $('r-loss').textContent=totalLoss+' lbs';
+  const totalLoss=+Math.max(cw-gw,0).toFixed(1);
+  $('r-loss').textContent=fmtD(totalLoss)+' lbs';
   if(totalLoss<=0){$('r-weeks').textContent='🎉';$('r-weeks-lbl').textContent='Already there!';$('r-date').textContent='—';$('r-rate').textContent='—';renderMilestones(cw,gw,0,[]);renderProjChart([],cw,gw);return;}
   const sim=simulateLoss(cw,gw,cal,exPerDay,actMults[actIdx],age,ht,sex,paceConfigs[pace].max);
   if(!sim.length||def0<50){$('r-weeks').textContent='∞';$('r-weeks-lbl').textContent='Increase deficit';$('r-date').textContent='—';$('r-rate').textContent='—';renderMilestones(cw,gw,0,sim);renderProjChart(sim,cw,gw);return;}
@@ -535,9 +535,9 @@ function renderCheckinPage(){
   if(!$('ci-date').value)$('ci-date').value=today;
   const plan=planData||JSON.parse(localStorage.getItem(STORE+'plan')||'null');
   $('no-plan-warn').style.display=!plan?'flex':'none';
-  if(plan)$('ps-start').textContent=plan.cw+' lbs';
+  if(plan)$('ps-start').textContent=fmtD(plan.cw)+' lbs';
   if(!checkins.length){
-    $('ps-current').textContent=plan?plan.cw+' lbs':'—';$('ps-lost').textContent='0 lbs';$('ps-remain').textContent=plan?(plan.cw-plan.gw)+' lbs':'—';
+    $('ps-current').textContent=plan?fmtD(plan.cw)+' lbs':'—';$('ps-lost').textContent='0 lbs';$('ps-remain').textContent=plan?fmtD(plan.cw-plan.gw)+' lbs':'—';
     $('ci-entries-wrap').innerHTML='<div class="empty-state"><div class="ei">📋</div><h4>No check-ins yet</h4><p>Log your weight each week to track real progress. Consistency is everything.</p></div>';
     $('ci-chart-card').style.display='none';return;
   }
@@ -547,7 +547,7 @@ function renderCheckinPage(){
   const goalWt=plan?plan.gw:startWt-35;
   const lost=+(startWt-latest.weight).toFixed(1);
   const remain=+(latest.weight-goalWt).toFixed(1);
-  $('ps-current').textContent=latest.weight+' lbs';$('ps-lost').textContent=(lost>0?'-':'+')+Math.abs(lost)+' lbs';$('ps-remain').textContent=Math.max(remain,0)+' lbs';
+  $('ps-current').textContent=fmtD(latest.weight)+' lbs';$('ps-lost').textContent=(lost>0?'-':'+')+Math.abs(lost)+' lbs';$('ps-remain').textContent=fmtD(Math.max(remain,0))+' lbs';
   let html='';
   const reversed=[...sorted].reverse();
   reversed.forEach(ci=>{
@@ -561,7 +561,7 @@ function renderCheckinPage(){
     html+=`<div class="ci-entry" id="entry-${ci.id}">
       <div class="ci-entry-left">
         <div class="ci-entry-date">${d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}</div>
-        <div class="ci-entry-wt">${ci.weight} lbs</div>
+        <div class="ci-entry-wt">${fmtD(ci.weight)} lbs</div>
         ${ci.note?`<div class="ci-entry-note">${ci.note}</div>`:''}
       </div>
       <div class="ci-entry-right">
@@ -773,7 +773,7 @@ function downloadPDF(){
 }
 
 // ══ EVENTS ═════════════════════════════════════════════
-['cw','gw','age','ht','sex','calSl','walkSl','liftSl','cardioSl','actSl','goalDate'].forEach(id=>{
+['cw','gw','age','ht-ft','ht-in','sex','calSl','walkSl','liftSl','cardioSl','actSl','goalDate'].forEach(id=>{
   const el=$(id);
   if(el) el.addEventListener('input',()=>{
     calculate();
