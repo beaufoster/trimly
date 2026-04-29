@@ -9,8 +9,8 @@
 <title>Trimly — Weight Loss Calculator</title>
 <link rel="manifest" href="/trimly/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/trimly/assets/main-kfkV-UYS.js"></script>
-  <link rel="stylesheet" crossorigin href="/trimly/assets/main-DreA8fkn.css">
+  <script type="module" crossorigin src="/trimly/assets/main-D4sTrmT9.js"></script>
+  <link rel="stylesheet" crossorigin href="/trimly/assets/main-BP5cWI2W.css">
 </head>
 <body>
 
@@ -48,6 +48,26 @@
     <div class="celebrate-title" id="cel-title">Milestone Hit!</div>
     <div class="celebrate-sub" id="cel-sub">Keep going!</div>
     <button class="celebrate-dismiss" onclick="dismissCelebration()">Awesome! 🙌</button>
+  </div>
+</div>
+
+<!-- SYNC / AUTH OVERLAY -->
+<div class="sync-overlay" id="sync-overlay">
+  <div class="sync-sheet">
+    <button class="sync-close" onclick="closeSyncSheet()">✕</button>
+    <span class="sync-ico">☁️</span>
+    <h2>Sync Across Devices</h2>
+    <p>Enter your email — we'll send a magic link. No password needed.</p>
+    <div id="sync-form-view">
+      <input type="email" id="sync-email" placeholder="your@email.com" autocomplete="email">
+      <button class="sync-submit" onclick="signIn()">Send Magic Link →</button>
+      <div id="sync-error" style="color:var(--red);font-size:0.8rem;margin-top:8px;display:none;"></div>
+    </div>
+    <div id="sync-sent-view" style="display:none;text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:10px;">📬</div>
+      <p><strong>Check your email!</strong></p>
+      <p style="color:var(--gray);font-size:0.88rem;margin-top:6px;">Click the link we sent to sign in and sync your data across devices.</p>
+    </div>
   </div>
 </div>
 
@@ -339,10 +359,11 @@
 
     <!-- DATA EXPORT / IMPORT -->
     <div class="data-actions-bar">
-      <div class="data-actions-label">Your data stays on your device. Back it up anytime.</div>
+      <div class="data-actions-label">Sync across devices or back up locally.</div>
       <div class="data-actions-btns">
-        <button class="data-btn" onclick="exportData()">⬇️ Export Data</button>
-        <label class="data-btn import-lbl" for="import-file">⬆️ Import Data</label>
+        <button class="data-btn" id="sync-btn" onclick="openSyncSheet()">☁️ Sync</button>
+        <button class="data-btn" onclick="exportData()">⬇️ Export</button>
+        <label class="data-btn import-lbl" for="import-file">⬆️ Import</label>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
       </div>
     </div>
