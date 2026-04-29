@@ -1005,9 +1005,15 @@ async function signIn(){
   errEl.style.display='none';
   const btn=$('sync-submit-btn');
   if(btn){btn.textContent='Sending…';btn.disabled=true;}
-  const{error}=await sb.auth.signInWithOtp({email});
+  // Always send an explicit redirectTo with trailing slash — GoTrue rejects paths without it
+  const redirectTo=window.location.origin+window.location.pathname.replace(/([^/])$/,'$1/');
+  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
   if(btn){btn.textContent='Send Code →';btn.disabled=false;}
-  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  if(error){
+    console.warn('[Trimly] signInWithOtp error:',error,'redirectTo:',redirectTo);
+    errEl.textContent=error.message;errEl.style.display='block';
+    return;
+  }
   _otpEmail=email;
   const desc=$('sync-otp-desc');
   if(desc)desc.textContent='We sent a 6-digit code to '+email+'. Enter it below.';
