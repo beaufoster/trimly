@@ -1,4 +1,5 @@
 import posthog from 'posthog-js';
+import { sb } from './supabase.js';
 
 // ══ TEST ENVIRONMENT ═══════════════════════════════
 const IS_TEST = new URLSearchParams(window.location.search).get('env') === 'test';
@@ -21,7 +22,7 @@ const ph = {
 };
 
 // ══ STATE ══════════════════════════════════════════
-let pace='steady', calcMode='weight', _paceOnly=false;
+let pace='steady', calcMode='weight', _paceOnly=false, currentUser=null;
 let checkins=JSON.parse(localStorage.getItem(STORE+'checkins')||'[]');
 let planData=JSON.parse(localStorage.getItem(STORE+'plan')||'null');
 let prevGoalDate=planData?planData.goalDate:null;
@@ -429,6 +430,7 @@ function calculate(){
         cardio:$('cardioSl').value,act:$('actSl').value,
         goalDate:$('goalDate').value,pace,mode:calcMode
       }));
+      syncUp();
     }
     return;
   }
@@ -456,6 +458,7 @@ function calculate(){
       cardio:$('cardioSl').value,act:$('actSl').value,
       goalDate:$('goalDate').value,pace,mode:calcMode
     }));
+    syncUp();
   }
 }
 
@@ -675,6 +678,7 @@ function addCheckin(){
   const prevStreak=calcStreak();
   checkins.push({id:Date.now(),date,weight,note});
   localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+  syncUp();
   $('ci-weight').value='';$('ci-note').value='';
   const newStreak=calcStreak();
   ph.capture('checkin_logged',{weight,streak:newStreak,has_note:!!note});
@@ -697,8 +701,10 @@ function deleteCheckin(id){
   if(!entry)return;
   const btn=entry.querySelector('.del-btn');
   if(btn.dataset.confirming==='true'){
+    const toDelete=checkins.find(c=>c.id===id);
     checkins=checkins.filter(c=>c.id!==id);
     localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+    if(toDelete)syncDeleteCheckin(toDelete.date);
     ph.capture('checkin_deleted');
     entry.style.transition='opacity 0.25s,transform 0.25s';
     entry.style.opacity='0';entry.style.transform='translateX(40px)';
@@ -823,6 +829,7 @@ $('ci-weight').addEventListener('keydown',e=>{if(e.key==='Enter')addCheckin();})
 $('ci-note').addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter')addCheckin();});
 $('modal-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('modal-email').focus();});
 $('modal-email').addEventListener('keydown',e=>{if(e.key==='Enter')submitModal();});
+$('sync-email').addEventListener('keydown',e=>{if(e.key==='Enter')signIn();});
 
 // Escape closes any open overlay
 document.addEventListener('keydown',e=>{
@@ -831,6 +838,7 @@ document.addEventListener('keydown',e=>{
   closeShareModal();
   dismissCelebration();
   if($('name-prompt-overlay').classList.contains('show'))saveName(true);
+  if($('sync-overlay')?.classList.contains('show'))closeSyncSheet();
 });
 
 // ══ INIT ═══════════════════════════════════════════════
@@ -863,6 +871,7 @@ if(savedForm){
 
 calculate();
 updateHeroGreeting();
+updateSyncUI();
 
 // Show name prompt after first meaningful interaction (or 20s if idle)
 if(!userName && !IS_TEST){
@@ -930,6 +939,113 @@ function importData(e){
   reader.readAsText(file);
 }
 
+// ══ AUTH & SYNC ═══════════════════════════════════════
+function updateSyncUI(){
+  const btn=$('sync-btn');
+  if(!btn)return;
+  if(!sb){btn.style.display='none';return;}
+  if(currentUser){
+    btn.textContent='✓ Synced';
+    btn.title=`Signed in as ${currentUser.email} — click to sign out`;
+    btn.classList.add('synced');
+    btn.onclick=signOut;
+  } else {
+    btn.textContent='☁️ Sync';
+    btn.title='Sign in to sync across devices';
+    btn.classList.remove('synced');
+    btn.onclick=openSyncSheet;
+  }
+}
+function openSyncSheet(){
+  if(!sb)return;
+  $('sync-overlay').classList.add('show');
+  $('sync-form-view').style.display='block';
+  $('sync-sent-view').style.display='none';
+  $('sync-error').style.display='none';
+  $('sync-email').value='';
+  setTimeout(()=>$('sync-email').focus(),300);
+}
+function closeSyncSheet(){
+  const ov=$('sync-overlay');if(ov)ov.classList.remove('show');
+}
+async function signIn(){
+  if(!sb)return;
+  const email=$('sync-email').value.trim();
+  const errEl=$('sync-error');
+  if(!email||!email.includes('@')){errEl.textContent='Enter a valid email address.';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  const redirectTo=window.location.origin+window.location.pathname;
+  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
+  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  $('sync-form-view').style.display='none';
+  $('sync-sent-view').style.display='block';
+  ph.capture('magic_link_sent');
+}
+async function signOut(){
+  if(!sb)return;
+  await sb.auth.signOut();
+  currentUser=null;
+  updateSyncUI();
+  ph.capture('signed_out');
+}
+async function syncUp(){
+  if(!sb||!currentUser||IS_TEST)return;
+  const uid=currentUser.id;
+  const ops=[];
+  if(checkins.length){
+    ops.push(sb.from('checkins').upsert(
+      checkins.map(c=>({user_id:uid,date:c.date,weight:c.weight,note:c.note||'',app_id:c.id})),
+      {onConflict:'user_id,date'}
+    ));
+  }
+  if(planData){
+    ops.push(sb.from('user_plans').upsert({user_id:uid,data:planData,updated_at:new Date().toISOString()}));
+  }
+  await Promise.all(ops);
+}
+async function syncDeleteCheckin(date){
+  if(!sb||!currentUser||IS_TEST)return;
+  await sb.from('checkins').delete().eq('user_id',currentUser.id).eq('date',date);
+}
+async function syncDown(){
+  if(!sb||!currentUser||IS_TEST)return false;
+  const uid=currentUser.id;
+  const[{data:remote},{data:planRow}]=await Promise.all([
+    sb.from('checkins').select('app_id,date,weight,note').eq('user_id',uid),
+    sb.from('user_plans').select('data').eq('user_id',uid).maybeSingle()
+  ]);
+  let changed=false;
+  if(remote?.length){
+    const localDates=new Set(checkins.map(c=>c.date));
+    const newOnes=remote.filter(r=>!localDates.has(r.date))
+      .map(r=>({id:r.app_id,date:r.date,weight:r.weight,note:r.note}));
+    if(newOnes.length){
+      checkins=[...checkins,...newOnes].sort((a,b)=>new Date(a.date)-new Date(b.date));
+      localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+      changed=true;
+    }
+  }
+  if(!planData&&planRow?.data){
+    planData=planRow.data;
+    localStorage.setItem(STORE+'plan',JSON.stringify(planData));
+    changed=true;
+  }
+  return changed;
+}
+if(sb){
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    currentUser=session?.user||null;
+    updateSyncUI();
+    if(currentUser){
+      closeSyncSheet();
+      const changed=await syncDown();
+      await syncUp();
+      if(changed){renderCheckinPage();calculate();}
+      ph.capture('auth_state_change',{event});
+    }
+  });
+}
+
 // ══ GLOBAL EXPORTS ═══════════════════════════════════
 // Expose functions to global scope for HTML onclick handlers
 window.showNamePrompt = showNamePrompt;
@@ -955,6 +1071,10 @@ window.skipModal = skipModal;
 window.downloadPDF = downloadPDF;
 window.exportData = exportData;
 window.importData = importData;
+window.openSyncSheet = openSyncSheet;
+window.closeSyncSheet = closeSyncSheet;
+window.signIn = signIn;
+window.signOut = signOut;
 
 window.addEventListener('resize',()=>{calculate();if($('page-checkin').classList.contains('active'))renderCheckinPage();});
 
