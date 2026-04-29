@@ -9,7 +9,7 @@
 <title>Trimly — Weight Loss Calculator</title>
 <link rel="manifest" href="/trimly/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/trimly/assets/main-BILvSdhH.js"></script>
+  <script type="module" crossorigin src="/trimly/assets/main-DjVvRlNk.js"></script>
   <link rel="stylesheet" crossorigin href="/trimly/assets/main-BEKSOLr7.css">
 </head>
 <body>
@@ -205,7 +205,10 @@
         </div>
         <div class="field">
           <label>Height</label>
-          <div class="inp-wrap"><input type="number" id="ht" value="70" min="48" max="84" inputmode="decimal" class="has-sfx"><span class="sfx">in</span></div>
+          <div style="display:flex;gap:6px;">
+            <div class="inp-wrap" style="flex:1;"><input type="number" id="ht-ft" value="5" min="4" max="7" inputmode="numeric" class="has-sfx"><span class="sfx">ft</span></div>
+            <div class="inp-wrap" style="flex:1;"><input type="number" id="ht-in" value="10" min="0" max="11" inputmode="numeric" class="has-sfx"><span class="sfx">in</span></div>
+          </div>
         </div>
         <div class="field">
           <label>Sex</label>
