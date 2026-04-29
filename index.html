@@ -9,8 +9,8 @@
 <title>Trimly — Weight Loss Calculator</title>
 <link rel="manifest" href="/trimly/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/trimly/assets/main-UklLdIia.js"></script>
-  <link rel="stylesheet" crossorigin href="/trimly/assets/main-BEKSOLr7.css">
+  <script type="module" crossorigin src="/trimly/assets/main-kfkV-UYS.js"></script>
+  <link rel="stylesheet" crossorigin href="/trimly/assets/main-DreA8fkn.css">
 </head>
 <body>
 
@@ -336,6 +336,16 @@
     </div>
     <div id="ci-entries-wrap"></div>
     <div class="ci-table-wrap" id="ci-table-wrap" style="display:none;"></div>
+
+    <!-- DATA EXPORT / IMPORT -->
+    <div class="data-actions-bar">
+      <div class="data-actions-label">Your data stays on your device. Back it up anytime.</div>
+      <div class="data-actions-btns">
+        <button class="data-btn" onclick="exportData()">⬇️ Export Data</button>
+        <label class="data-btn import-lbl" for="import-file">⬆️ Import Data</label>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
   </div>
 </div>
 
