@@ -883,6 +883,53 @@ ph.capture('app_loaded',{
   returning_user:!!planData||checkins.length>0,
 });
 
+// ══ EXPORT / IMPORT ══════════════════════════════════
+function exportData(){
+  const data={
+    version:1,
+    exported:new Date().toISOString(),
+    checkins,
+    plan:planData,
+    celebrated:celebratedMilestones,
+    name:userName,
+    form:JSON.parse(localStorage.getItem(STORE+'form')||'null')
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`trimly-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();URL.revokeObjectURL(url);
+  ph.capture('data_exported',{checkin_count:checkins.length});
+}
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!data.version||!Array.isArray(data.checkins))throw new Error('invalid');
+      const incoming=data.checkins.length;
+      const existingDates=new Set(checkins.map(c=>c.date));
+      const newOnes=data.checkins.filter(c=>!existingDates.has(c.date));
+      const skipped=incoming-newOnes.length;
+      if(!confirm(`Import ${incoming} check-in${incoming===1?'':'s'}?${skipped>0?` (${skipped} duplicate date${skipped===1?'':'s'} will be skipped)`:''}  Your existing data won't be overwritten.`)){e.target.value='';return;}
+      checkins=[...checkins,...newOnes].sort((a,b)=>new Date(a.date)-new Date(b.date));
+      localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+      if(!planData&&data.plan){planData=data.plan;localStorage.setItem(STORE+'plan',JSON.stringify(planData));}
+      if(!userName&&data.name){userName=data.name;localStorage.setItem(STORE+'name',userName);updateHeroGreeting();}
+      if(data.celebrated){
+        celebratedMilestones=[...new Set([...celebratedMilestones,...data.celebrated])];
+        localStorage.setItem(STORE+'celebrated',JSON.stringify(celebratedMilestones));
+      }
+      ph.capture('data_imported',{imported:newOnes.length,skipped});
+      renderCheckinPage();calculate();
+      alert(`Done! Added ${newOnes.length} check-in${newOnes.length===1?'':'s'}.${skipped>0?' '+skipped+' duplicate date'+(skipped===1?'':'s')+' skipped.':''}`);
+    }catch(err){alert('Could not read the file. Make sure it\'s a Trimly backup JSON.');}
+    e.target.value='';
+  };
+  reader.readAsText(file);
+}
+
 // ══ GLOBAL EXPORTS ═══════════════════════════════════
 // Expose functions to global scope for HTML onclick handlers
 window.showNamePrompt = showNamePrompt;
@@ -906,6 +953,8 @@ window.closeModal = closeModal;
 window.submitModal = submitModal;
 window.skipModal = skipModal;
 window.downloadPDF = downloadPDF;
+window.exportData = exportData;
+window.importData = importData;
 
 window.addEventListener('resize',()=>{calculate();if($('page-checkin').classList.contains('active'))renderCheckinPage();});
 

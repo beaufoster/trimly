@@ -252,6 +252,14 @@ canvas{display:block;border-radius:8px;width:100% !important;}
 .empty-state h4{font-family:'Fraunces',serif;font-size:1rem;color:var(--dark);margin-bottom:5px;}
 .empty-state p{font-size:0.84rem;line-height:1.5;}
 
+/* ── DATA ACTIONS ── */
+.data-actions-bar{margin-top:20px;padding:16px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;}
+.data-actions-label{font-size:0.76rem;color:var(--gray);margin-bottom:10px;}
+.data-actions-btns{display:flex;gap:10px;justify-content:center;}
+.data-btn{flex:1;max-width:160px;background:var(--gray-light);color:var(--mid);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:0.82rem;font-weight:600;cursor:pointer;transition:background 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.data-btn:hover,.data-btn:active{background:var(--green-pale);border-color:var(--green-border);color:var(--green);}
+.import-lbl{line-height:normal;}
+
 /* ── PLATEAU CARD ── */
 .plateau-tips{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
 .plateau-tip{background:var(--gold-light);border-radius:9px;padding:9px 12px;font-size:0.8rem;color:#78350f;display:flex;gap:8px;align-items:flex-start;}

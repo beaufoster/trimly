@@ -335,6 +335,16 @@
     </div>
     <div id="ci-entries-wrap"></div>
     <div class="ci-table-wrap" id="ci-table-wrap" style="display:none;"></div>
+
+    <!-- DATA EXPORT / IMPORT -->
+    <div class="data-actions-bar">
+      <div class="data-actions-label">Your data stays on your device. Back it up anytime.</div>
+      <div class="data-actions-btns">
+        <button class="data-btn" onclick="exportData()">⬇️ Export Data</button>
+        <label class="data-btn import-lbl" for="import-file">⬆️ Import Data</label>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
   </div>
 </div>
 
