@@ -48,6 +48,7 @@ function calcBMR(wt,ht,age,sex){const kg=wt*0.453592,cm=ht*2.54;return sex==='ma
 function showNamePrompt(){
   const overlay=$('name-prompt-overlay');
   if(overlay) overlay.classList.add('show');
+  setTimeout(()=>$('name-input').focus(),300);
 }
 function saveName(skip=false){
   const val=skip?'':($('name-input').value.trim());
@@ -703,7 +704,7 @@ function showPage(name){
   ['calculator','checkin'].forEach(n=>{const t=$('tab-'+n);if(t)t.classList.toggle('active',n===name);});
   document.querySelectorAll('.desktop-nav-tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().includes(name==='calculator'?'calc':'check')));
   ph.capture('page_viewed',{page:name});
-  if(name==='checkin')renderCheckinPage();
+  if(name==='checkin'){renderCheckinPage();setTimeout(()=>$('ci-weight').focus(),100);}
   if(name==='calculator')setTimeout(calculate,50);
 }
 
@@ -786,6 +787,23 @@ function downloadPDF(){
 });
 $('modal-overlay').addEventListener('click',e=>{if(e.target===$('modal-overlay'))closeModal();});
 $('share-overlay').addEventListener('click',e=>{if(e.target===$('share-overlay'))closeShareModal();});
+
+// Enter key shortcuts
+$('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveName();});
+$('ci-date').addEventListener('keydown',e=>{if(e.key==='Enter')$('ci-weight').focus();});
+$('ci-weight').addEventListener('keydown',e=>{if(e.key==='Enter')addCheckin();});
+$('ci-note').addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter')addCheckin();});
+$('modal-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('modal-email').focus();});
+$('modal-email').addEventListener('keydown',e=>{if(e.key==='Enter')submitModal();});
+
+// Escape closes any open overlay
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  closeModal();
+  closeShareModal();
+  dismissCelebration();
+  if($('name-prompt-overlay').classList.contains('show'))saveName(true);
+});
 
 // ══ INIT ═══════════════════════════════════════════════
 if(!IS_TEST && PH_KEY !== 'YOUR_POSTHOG_KEY'){
