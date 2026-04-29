@@ -27,6 +27,7 @@ let planData=JSON.parse(localStorage.getItem(STORE+'plan')||'null');
 let prevGoalDate=planData?planData.goalDate:null;
 let celebratedMilestones=JSON.parse(localStorage.getItem(STORE+'celebrated')||'[]');
 let userName=localStorage.getItem(STORE+'name')||'';
+const savedForm=JSON.parse(localStorage.getItem(STORE+'form')||'null');
 
 const paceConfigs={
   gentle:{max:0.5,label:'Gentle pace',desc:'≤ 0.5 lb/week. Great for long-term habits with minimal restriction.'},
@@ -419,7 +420,17 @@ function calculate(){
     $('r-date').textContent=fmtDate(targetDate);$('r-rate').textContent=fmtD(avgRate)+' lbs/wk avg';$('r-loss').textContent=totalLost+' lbs';
     renderMilestones(cw,projWt,avgRate,sim);renderProjChart(sim,cw,projWt);
     planData={cw,gw:projWt,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'date'};
-    if(!_paceOnly) localStorage.setItem(STORE+'plan',JSON.stringify(planData));return;
+    if(!_paceOnly){
+      localStorage.setItem(STORE+'plan',JSON.stringify(planData));
+      localStorage.setItem(STORE+'form',JSON.stringify({
+        cw:$('cw').value,gw:$('gw').value,age:$('age').value,
+        htFt:$('ht-ft').value,htIn:$('ht-in').value,sex:$('sex').value,
+        cal:$('calSl').value,walk:$('walkSl').value,lift:$('liftSl').value,
+        cardio:$('cardioSl').value,act:$('actSl').value,
+        goalDate:$('goalDate').value,pace,mode:calcMode
+      }));
+    }
+    return;
   }
 
   const gw=parseFloat($('gw').value)||175;
@@ -436,7 +447,16 @@ function calculate(){
   $('r-date').textContent=fmtDate(goalDate);$('r-rate').textContent=fmtD(avgRate)+' lbs/wk avg';
   renderMilestones(cw,gw,avgRate,sim);renderProjChart(sim,cw,gw);
   planData={cw,gw,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'weight'};
-  if(!_paceOnly) localStorage.setItem(STORE+'plan',JSON.stringify(planData));
+  if(!_paceOnly){
+    localStorage.setItem(STORE+'plan',JSON.stringify(planData));
+    localStorage.setItem(STORE+'form',JSON.stringify({
+      cw:$('cw').value,gw:$('gw').value,age:$('age').value,
+      htFt:$('ht-ft').value,htIn:$('ht-in').value,sex:$('sex').value,
+      cal:$('calSl').value,walk:$('walkSl').value,lift:$('liftSl').value,
+      cardio:$('cardioSl').value,act:$('actSl').value,
+      goalDate:$('goalDate').value,pace,mode:calcMode
+    }));
+  }
 }
 
 // ══ MILESTONES ════════════════════════════════════════
@@ -593,7 +613,11 @@ function renderCheckinChart(sorted,plan,startWt,goalWt){
     const st=Math.max(1,Math.floor(plan.sim.length/20));
     projPts=[{week:0,weight:startWt},...plan.sim.filter((_,i)=>i%st===0||i===plan.sim.length-1)];
   }
-  const origin=plan?new Date(plan.savedAt):new Date(sorted[0].date+'T12:00');
+  const planOriginDate=plan?new Date(plan.savedAt):new Date(sorted[0].date+'T12:00');
+  const earliestCheckin=new Date(sorted[0].date+'T12:00');
+  const origin=new Date(Math.min(planOriginDate.getTime(),earliestCheckin.getTime()));
+  const planOffset=Math.round((planOriginDate.getTime()-origin.getTime())/(7*24*3600*1000));
+  if(planOffset>0)projPts=projPts.map(p=>({...p,week:p.week+planOffset}));
   const actualPts=sorted.map(ci=>{const d=new Date(ci.date+'T12:00');return{week:Math.round((d-origin)/(7*24*3600*1000)),weight:ci.weight};});
   // Trend line
   let trendPts=[];
@@ -635,7 +659,7 @@ function renderCheckinChart(sorted,plan,startWt,goalWt){
   let lxOff=lx;
   legend.forEach(l=>{if(l.dash)ctx.setLineDash([5,3]);else ctx.setLineDash([]);ctx.strokeStyle=l.color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lxOff,ly);ctx.lineTo(lxOff+16,ly);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#5a6460';ctx.font='9px DM Sans,sans-serif';ctx.textAlign='left';ctx.fillText(l.label,lxOff+19,ly+3);lxOff+=ctx.measureText(l.label).width+32;});
   ctx.fillStyle='#b0b8b4';ctx.font='10px DM Sans,sans-serif';ctx.textAlign='center';
-  for(let w=0;w<=maxWeek;w+=Math.max(1,Math.floor(maxWeek/5)))ctx.fillText(w===0?'Now':'Wk '+w,xP(w),H-5);
+  for(let w=0;w<=maxWeek;w+=Math.max(1,Math.floor(maxWeek/5)))ctx.fillText(w===0?'Start':'Wk '+w,xP(w),H-5);
 }
 
 function addCheckin(){
@@ -817,12 +841,37 @@ if(!IS_TEST && PH_KEY !== 'YOUR_POSTHOG_KEY'){
   });
 }
 
+// Restore form state from last session
+if(savedForm){
+  if(savedForm.cw)  $('cw').value=savedForm.cw;
+  if(savedForm.gw)  $('gw').value=savedForm.gw;
+  if(savedForm.age) $('age').value=savedForm.age;
+  if(savedForm.htFt)$('ht-ft').value=savedForm.htFt;
+  if(savedForm.htIn)$('ht-in').value=savedForm.htIn;
+  if(savedForm.sex) $('sex').value=savedForm.sex;
+  if(savedForm.cal) $('calSl').value=savedForm.cal;
+  if(savedForm.walk)$('walkSl').value=savedForm.walk;
+  if(savedForm.lift)$('liftSl').value=savedForm.lift;
+  if(savedForm.cardio)$('cardioSl').value=savedForm.cardio;
+  if(savedForm.act) $('actSl').value=savedForm.act;
+  if(savedForm.goalDate)$('goalDate').value=savedForm.goalDate;
+  if(savedForm.pace) pace=savedForm.pace;
+  if(savedForm.mode) calcMode=savedForm.mode;
+  ['gentle','steady','aggressive'].forEach(n=>{const b=$('sc-'+n);if(b)b.classList.toggle('active',n===pace);});
+  setMode(calcMode);
+}
+
 calculate();
 updateHeroGreeting();
 
-// Show name prompt on first visit (after 2 seconds)
+// Show name prompt after first meaningful interaction (or 20s if idle)
 if(!userName && !IS_TEST){
-  setTimeout(()=>showNamePrompt(), 2000);
+  let namePromptShown=false;
+  const showPromptOnce=()=>{if(namePromptShown)return;namePromptShown=true;showNamePrompt();};
+  document.querySelectorAll('input[type=range],input[type=number],select').forEach(el=>{
+    el.addEventListener('change',()=>setTimeout(showPromptOnce,500),{once:true});
+  });
+  setTimeout(showPromptOnce,20000);
 }
 
 // Track session start
