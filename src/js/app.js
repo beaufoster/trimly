@@ -22,7 +22,7 @@ const ph = {
 };
 
 // ══ STATE ══════════════════════════════════════════
-let pace='steady', calcMode='weight', _paceOnly=false, currentUser=null;
+let pace='steady', calcMode='weight', _paceOnly=false, currentUser=null, _syncInFlight=false, _syncTimer=null;
 let checkins=JSON.parse(localStorage.getItem(STORE+'checkins')||'[]');
 let planData=JSON.parse(localStorage.getItem(STORE+'plan')||'null');
 let prevGoalDate=planData?planData.goalDate:null;
@@ -430,7 +430,7 @@ function calculate(){
         cardio:$('cardioSl').value,act:$('actSl').value,
         goalDate:$('goalDate').value,pace,mode:calcMode
       }));
-      syncUp();
+      scheduleSyncUp();
     }
     return;
   }
@@ -458,7 +458,7 @@ function calculate(){
       cardio:$('cardioSl').value,act:$('actSl').value,
       goalDate:$('goalDate').value,pace,mode:calcMode
     }));
-    syncUp();
+    scheduleSyncUp();
   }
 }
 
@@ -821,6 +821,7 @@ function downloadPDF(){
 });
 $('modal-overlay').addEventListener('click',e=>{if(e.target===$('modal-overlay'))closeModal();});
 $('share-overlay').addEventListener('click',e=>{if(e.target===$('share-overlay'))closeShareModal();});
+$('sync-overlay').addEventListener('click',e=>{if(e.target===$('sync-overlay'))closeSyncSheet();});
 
 // Enter key shortcuts
 $('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveName();});
@@ -974,8 +975,10 @@ async function signIn(){
   const errEl=$('sync-error');
   if(!email||!email.includes('@')){errEl.textContent='Enter a valid email address.';errEl.style.display='block';return;}
   errEl.style.display='none';
-  const redirectTo=window.location.origin+window.location.pathname;
-  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
+  const btn=$('sync-submit-btn');
+  if(btn){btn.textContent='Sending…';btn.disabled=true;}
+  const{error}=await sb.auth.signInWithOtp({email});
+  if(btn){btn.textContent='Send Magic Link →';btn.disabled=false;}
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
   $('sync-form-view').style.display='none';
   $('sync-sent-view').style.display='block';
@@ -986,62 +989,76 @@ async function signOut(){
   await sb.auth.signOut();
   currentUser=null;
   updateSyncUI();
+  $('sync-form-view').style.display='block';
+  $('sync-sent-view').style.display='none';
+  $('sync-email').value='';
   ph.capture('signed_out');
 }
 async function syncUp(){
-  if(!sb||!currentUser||IS_TEST)return;
-  const uid=currentUser.id;
-  const ops=[];
-  if(checkins.length){
-    ops.push(sb.from('checkins').upsert(
-      checkins.map(c=>({user_id:uid,date:c.date,weight:c.weight,note:c.note||'',app_id:c.id})),
-      {onConflict:'user_id,date'}
-    ));
-  }
-  if(planData){
-    ops.push(sb.from('user_plans').upsert({user_id:uid,data:planData,updated_at:new Date().toISOString()}));
-  }
-  await Promise.all(ops);
+  if(!sb||!currentUser||IS_TEST||_syncInFlight)return;
+  _syncInFlight=true;
+  try{
+    const uid=currentUser.id;
+    const ops=[];
+    if(checkins.length){
+      ops.push(sb.from('checkins').upsert(
+        checkins.map(c=>({user_id:uid,date:c.date,weight:c.weight,note:c.note||'',app_id:c.id})),
+        {onConflict:'user_id,date'}
+      ));
+    }
+    if(planData){
+      ops.push(sb.from('user_plans').upsert({user_id:uid,data:planData,updated_at:new Date().toISOString()}));
+    }
+    await Promise.all(ops);
+  }catch(e){console.warn('[Trimly] sync push failed:',e);}
+  finally{_syncInFlight=false;}
 }
+function scheduleSyncUp(){clearTimeout(_syncTimer);_syncTimer=setTimeout(syncUp,2000);}
 async function syncDeleteCheckin(date){
   if(!sb||!currentUser||IS_TEST)return;
-  await sb.from('checkins').delete().eq('user_id',currentUser.id).eq('date',date);
+  try{await sb.from('checkins').delete().eq('user_id',currentUser.id).eq('date',date);}
+  catch(e){console.warn('[Trimly] sync delete failed:',e);}
 }
 async function syncDown(){
   if(!sb||!currentUser||IS_TEST)return false;
-  const uid=currentUser.id;
-  const[{data:remote},{data:planRow}]=await Promise.all([
-    sb.from('checkins').select('app_id,date,weight,note').eq('user_id',uid),
-    sb.from('user_plans').select('data').eq('user_id',uid).maybeSingle()
-  ]);
-  let changed=false;
-  if(remote?.length){
-    const localDates=new Set(checkins.map(c=>c.date));
-    const newOnes=remote.filter(r=>!localDates.has(r.date))
-      .map(r=>({id:r.app_id,date:r.date,weight:r.weight,note:r.note}));
-    if(newOnes.length){
-      checkins=[...checkins,...newOnes].sort((a,b)=>new Date(a.date)-new Date(b.date));
-      localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+  try{
+    const uid=currentUser.id;
+    const[{data:remote,error:e1},{data:planRow,error:e2}]=await Promise.all([
+      sb.from('checkins').select('app_id,date,weight,note').eq('user_id',uid),
+      sb.from('user_plans').select('data').eq('user_id',uid).maybeSingle()
+    ]);
+    if(e1)throw e1;if(e2)throw e2;
+    let changed=false;
+    if(remote?.length){
+      const localDates=new Set(checkins.map(c=>c.date));
+      const newOnes=remote.filter(r=>!localDates.has(r.date))
+        .map(r=>({id:r.app_id||Date.now()+Math.floor(Math.random()*1000),date:r.date,weight:r.weight,note:r.note||''}));
+      if(newOnes.length){
+        checkins=[...checkins,...newOnes].sort((a,b)=>new Date(a.date)-new Date(b.date));
+        localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+        changed=true;
+      }
+    }
+    if(!planData&&planRow?.data){
+      planData=planRow.data;
+      localStorage.setItem(STORE+'plan',JSON.stringify(planData));
       changed=true;
     }
-  }
-  if(!planData&&planRow?.data){
-    planData=planRow.data;
-    localStorage.setItem(STORE+'plan',JSON.stringify(planData));
-    changed=true;
-  }
-  return changed;
+    return changed;
+  }catch(e){console.warn('[Trimly] sync pull failed:',e);return false;}
 }
 if(sb){
   sb.auth.onAuthStateChange(async(event,session)=>{
     currentUser=session?.user||null;
     updateSyncUI();
-    if(currentUser){
+    // Only do a full sync on first sign-in or page load with existing session.
+    // TOKEN_REFRESHED fires every hour — no need to re-sync the whole dataset.
+    if(currentUser&&(event==='SIGNED_IN'||event==='INITIAL_SESSION')){
       closeSyncSheet();
       const changed=await syncDown();
       await syncUp();
       if(changed){renderCheckinPage();calculate();}
-      ph.capture('auth_state_change',{event});
+      ph.capture('signed_in',{event});
     }
   });
 }
