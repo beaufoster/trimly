@@ -833,9 +833,17 @@ $('modal-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('modal-email
 $('modal-email').addEventListener('keydown',e=>{if(e.key==='Enter')submitModal();});
 $('sync-email').addEventListener('keydown',e=>{if(e.key==='Enter')signIn();});
 
+// Close account menu on outside click
+document.addEventListener('click',e=>{
+  const menu=$('account-menu');
+  if(menu&&menu.style.display!=='none'&&!e.target.closest('.account-btn')&&!e.target.closest('#account-menu'))
+    menu.style.display='none';
+});
+
 // Escape closes any open overlay
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
+  const menu=$('account-menu');if(menu)menu.style.display='none';
   closeModal();
   closeShareModal();
   dismissCelebration();
@@ -952,28 +960,45 @@ function showToast(msg,duration=3500){
 function updateSyncUI(){
   const btn=$('sync-btn');
   const nudge=$('sync-nudge');
-  if(!btn)return;
+  const acctBtns=document.querySelectorAll('.account-btn');
   if(!sb){
-    btn.style.display='none';
+    if(btn)btn.style.display='none';
     if(nudge)nudge.style.display='none';
+    acctBtns.forEach(b=>b.style.display='none');
     return;
   }
   if(currentUser){
     const email=currentUser.email||'';
-    const short=email.length>26?email.slice(0,24)+'…':email;
-    btn.textContent='✓ '+short;
-    btn.title='Signed in as '+email+' · tap to sign out';
-    btn.classList.add('synced');
-    btn.onclick=signOut;
+    const initial=(email[0]||'?').toUpperCase();
+    acctBtns.forEach(b=>{b.style.display='flex';b.textContent=initial;b.classList.add('signed-in');b.title='Account: '+email;});
+    if(btn){
+      const short=email.length>26?email.slice(0,24)+'…':email;
+      btn.textContent='✓ '+short;btn.title='Signed in as '+email;
+      btn.classList.add('synced');btn.onclick=signOut;
+    }
     if(nudge)nudge.style.display='none';
   } else {
-    btn.textContent='☁️ Create Account';
-    btn.title='Save your progress and sync across devices';
-    btn.classList.remove('synced');
-    btn.onclick=openSyncSheet;
+    acctBtns.forEach(b=>{b.style.display='flex';b.textContent='☁';b.classList.remove('signed-in');b.title='Sign in to sync';});
+    if(btn){
+      btn.textContent='☁️ Create Account';btn.title='Save your progress and sync across devices';
+      btn.classList.remove('synced');btn.onclick=openSyncSheet;
+    }
     const dismissed=localStorage.getItem(STORE+'sync_nudge_dismissed');
     if(nudge)nudge.style.display=(!dismissed&&checkins.length>0)?'flex':'none';
   }
+}
+function toggleAccountMenu(){
+  const menu=$('account-menu');
+  if(!menu)return;
+  if(menu.style.display!=='none'){menu.style.display='none';return;}
+  if(!currentUser){openSyncSheet();return;}
+  $('account-menu-email').textContent='Signed in as '+currentUser.email;
+  menu.style.display='block';
+}
+async function signOutFromMenu(){
+  const menu=$('account-menu');
+  if(menu)menu.style.display='none';
+  await signOut();
 }
 function dismissSyncNudge(){
   localStorage.setItem(STORE+'sync_nudge_dismissed','1');
@@ -1136,6 +1161,8 @@ window.closeSyncSheet = closeSyncSheet;
 window.signIn = signIn;
 window.resendLink = resendLink;
 window.signOut = signOut;
+window.toggleAccountMenu = toggleAccountMenu;
+window.signOutFromMenu = signOutFromMenu;
 window.dismissSyncNudge = dismissSyncNudge;
 
 window.addEventListener('resize',()=>{calculate();if($('page-checkin').classList.contains('active'))renderCheckinPage();});
