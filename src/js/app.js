@@ -796,7 +796,7 @@ function submitModal(){
   // Save name if entered
   if(name&&!userName){userName=name;localStorage.setItem(STORE+'name',name);updateHeroGreeting();}
   ph.capture('email_captured',{has_name:!!name,plan_mode:calcMode,streak:calcStreak()});
-  console.log('Lead captured:',{name,email,plan:planData,env:IS_TEST?'test':'production'});
+  if(sb&&!IS_TEST) sb.from('leads').insert({name,email,plan_mode:calcMode,checkin_count:checkins.length}).then(({error})=>{if(error)console.warn('[Trimly] lead save:',error.message);});
   $('modal-form-view').style.display='none';$('modal-success-view').style.display='block';
 }
 function skipModal(){
