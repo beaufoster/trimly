@@ -16,16 +16,18 @@ if(IS_TEST){
 }
 
 // ══ POSTHOG ANALYTICS ══════════════════════════════
-// Replace YOUR_POSTHOG_KEY with your actual PostHog project API key from posthog.com
 const PH_KEY = 'phc_uANfyidyehw2qkveadqRKqyoJQheqT3Vo5r8iEKxTRvc';
+// Stable anonymous device ID — lets PostHog do retention analysis before sign-in
+let _deviceId = localStorage.getItem('trimly_device_id');
+if(!_deviceId){_deviceId='dev_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36);localStorage.setItem('trimly_device_id',_deviceId);}
 const ph = {
   identify(id,props){if(IS_TEST||IS_OWNER||PH_KEY==='YOUR_POSTHOG_KEY')return;try{posthog.identify(id,props);}catch(e){}},
   capture(event,props={}){
     if(IS_TEST||IS_OWNER||PH_KEY==='YOUR_POSTHOG_KEY'){if(IS_TEST||IS_OWNER)console.log('[Analytics suppressed]',event,props);return;}
     try{posthog.capture(event,{...props,env:'production',streak:calcStreak(),has_checkins:checkins.length,plan_mode:calcMode});}catch(e){}
-  }
+  },
+  reset(){if(IS_TEST||IS_OWNER)return;try{posthog.reset();}catch(e){}}
 };
-
 // ══ STATE ══════════════════════════════════════════
 let pace='steady', calcMode='weight', _paceOnly=false, currentUser=null, _syncInFlight=false, _syncTimer=null, _otpEmail='';
 const KG_TO_LBS=2.20462;
@@ -889,12 +891,23 @@ document.addEventListener('keydown',e=>{
 });
 
 // ══ INIT ═══════════════════════════════════════════════
-if(!IS_TEST && !IS_OWNER && PH_KEY !== 'YOUR_POSTHOG_KEY'){
-  posthog.init(PH_KEY, {
-    api_host: 'https://us.i.posthog.com',
-    person_profiles: 'identified_only',
-  });
+const _cookieConsent=localStorage.getItem('trimly_cookie_consent');
+function _initPosthog(){
+  if(IS_TEST||IS_OWNER||PH_KEY==='YOUR_POSTHOG_KEY')return;
+  try{posthog.init(PH_KEY,{api_host:'https://us.i.posthog.com',person_profiles:'identified_only'});}catch(e){}
+  try{posthog.identify(_deviceId);}catch(e){}
 }
+function acceptCookies(){
+  localStorage.setItem('trimly_cookie_consent','accepted');
+  const b=$('cookie-banner');if(b)b.style.display='none';
+  _initPosthog();
+  ph.capture('cookie_consent',{action:'accepted'});
+}
+function declineCookies(){
+  localStorage.setItem('trimly_cookie_consent','declined');
+  const b=$('cookie-banner');if(b)b.style.display='none';
+}
+if(_cookieConsent==='accepted') _initPosthog();
 
 // Restore form state from last session
 if(savedForm){
@@ -943,6 +956,19 @@ ph.capture('app_loaded',{
   checkin_count:checkins.length,
   streak:calcStreak(),
   returning_user:!!planData||checkins.length>0,
+});
+
+// Show cookie banner if user hasn't decided yet
+if(!_cookieConsent&&!IS_TEST&&!IS_OWNER){
+  setTimeout(()=>{const b=$('cookie-banner');if(b)b.style.display='flex';},1500);
+}
+
+// Production error tracking — catches silent crashes
+window.addEventListener('unhandledrejection',e=>{
+  ph.capture('js_error',{type:'unhandledrejection',message:String(e.reason).slice(0,200)});
+});
+window.addEventListener('error',e=>{
+  ph.capture('js_error',{type:'uncaught',message:(e.message||'').slice(0,200),source:(e.filename||'').replace(/.*\//,'')});
 });
 
 // ══ EXPORT / IMPORT ══════════════════════════════════
@@ -1103,6 +1129,8 @@ async function signOut(){
   [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed'].forEach(k=>localStorage.removeItem(k));
   checkins=[];planData=null;celebratedMilestones=[];
   currentUser=null;_otpEmail='';
+  ph.reset();
+  ph.identify(_deviceId);
   updateSyncUI();
   updateHeroGreeting();
   renderCheckinPage();
@@ -1176,6 +1204,8 @@ if(sb){
     currentUser=session?.user||null;
     updateSyncUI();
     if(currentUser&&(event==='SIGNED_IN'||event==='INITIAL_SESSION')){
+      // Link the anonymous device history to the real user account in PostHog
+      ph.identify(currentUser.id,{email:currentUser.email});
       closeSyncSheet();
       const changed=await syncDown();
       await syncUp();
