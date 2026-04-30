@@ -3,6 +3,11 @@ import { sb } from './supabase.js';
 
 // ══ TEST ENVIRONMENT ═══════════════════════════════
 const IS_TEST = new URLSearchParams(window.location.search).get('env') === 'test';
+// Owner/dev mode — disables analytics + recordings. Enable once per device: trimly/?dev=owner
+const DEV_PARAM = new URLSearchParams(window.location.search).get('dev');
+if(DEV_PARAM==='owner') localStorage.setItem('trimly_owner_mode','1');
+if(DEV_PARAM==='off') localStorage.removeItem('trimly_owner_mode');
+const IS_OWNER = !!localStorage.getItem('trimly_owner_mode');
 const STORE = IS_TEST ? 'trimly_test_' : 'tr_';
 if(IS_TEST){
   document.body.classList.add('is-test');
@@ -14,9 +19,9 @@ if(IS_TEST){
 // Replace YOUR_POSTHOG_KEY with your actual PostHog project API key from posthog.com
 const PH_KEY = 'phc_uANfyidyehw2qkveadqRKqyoJQheqT3Vo5r8iEKxTRvc';
 const ph = {
-  identify(id,props){if(IS_TEST||PH_KEY==='YOUR_POSTHOG_KEY')return;try{posthog.identify(id,props);}catch(e){}},
+  identify(id,props){if(IS_TEST||IS_OWNER||PH_KEY==='YOUR_POSTHOG_KEY')return;try{posthog.identify(id,props);}catch(e){}},
   capture(event,props={}){
-    if(IS_TEST||PH_KEY==='YOUR_POSTHOG_KEY'){console.log('[Analytics]',event,props);return;}
+    if(IS_TEST||IS_OWNER||PH_KEY==='YOUR_POSTHOG_KEY'){if(IS_TEST||IS_OWNER)console.log('[Analytics suppressed]',event,props);return;}
     try{posthog.capture(event,{...props,env:'production',streak:calcStreak(),has_checkins:checkins.length,plan_mode:calcMode});}catch(e){}
   }
 };
@@ -852,7 +857,7 @@ document.addEventListener('keydown',e=>{
 });
 
 // ══ INIT ═══════════════════════════════════════════════
-if(!IS_TEST && PH_KEY !== 'YOUR_POSTHOG_KEY'){
+if(!IS_TEST && !IS_OWNER && PH_KEY !== 'YOUR_POSTHOG_KEY'){
   posthog.init(PH_KEY, {
     api_host: 'https://us.i.posthog.com',
     person_profiles: 'identified_only',
@@ -967,6 +972,7 @@ function updateSyncUI(){
     acctBtns.forEach(b=>b.style.display='none');
     return;
   }
+  const personIcon='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
   if(currentUser){
     const email=currentUser.email||'';
     const initial=(email[0]||'?').toUpperCase();
@@ -978,7 +984,7 @@ function updateSyncUI(){
     }
     if(nudge)nudge.style.display='none';
   } else {
-    acctBtns.forEach(b=>{b.style.display='flex';b.textContent='☁';b.classList.remove('signed-in');b.title='Sign in to sync';});
+    acctBtns.forEach(b=>{b.style.display='flex';b.innerHTML=personIcon+'<span>Sign In</span>';b.classList.remove('signed-in');b.title='Sign in to sync your data';});
     if(btn){
       btn.textContent='☁️ Create Account';btn.title='Save your progress and sync across devices';
       btn.classList.remove('synced');btn.onclick=openSyncSheet;

@@ -289,8 +289,10 @@ canvas{display:block;border-radius:8px;width:100% !important;}
 .sync-nudge-arrow{font-size:0.82rem;font-weight:700;color:var(--green);white-space:nowrap;}
 .sync-nudge-dismiss{background:none;border:none;color:var(--gray);cursor:pointer;font-size:0.85rem;padding:2px 4px;flex-shrink:0;}
 /* ── ACCOUNT BUTTON ── */
-.account-btn{width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s,border-color 0.15s;}
-.account-btn.signed-in{background:var(--green-mid);border-color:var(--green-mid);}
+.account-btn{display:none;align-items:center;gap:6px;padding:7px 13px;border-radius:100px;border:1.5px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background 0.15s,border-color 0.15s;}
+.account-btn:hover{background:rgba(255,255,255,0.2);}
+.account-btn.signed-in{width:36px;height:36px;padding:0;border-radius:50%;background:var(--green-mid);border-color:var(--green-mid);font-size:0.95rem;font-weight:700;justify-content:center;letter-spacing:0;}
+.account-btn.signed-in:hover{background:#1e9950;}
 /* ── ACCOUNT MENU ── */
 .account-menu{position:fixed;top:62px;right:16px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:500;min-width:220px;}
 .account-menu-email{font-size:0.8rem;color:var(--gray);padding:4px 4px 10px;word-break:break-all;line-height:1.4;}
