@@ -10,8 +10,8 @@
 <title>Trimly — Weight Loss Calculator</title>
 <link rel="manifest" href="/trimly/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/trimly/assets/main-C6b_1s8y.js"></script>
-  <link rel="stylesheet" crossorigin href="/trimly/assets/main-3Etz5Ver.css">
+  <script type="module" crossorigin src="/trimly/assets/main-CQi0rNQ6.js"></script>
+  <link rel="stylesheet" crossorigin href="/trimly/assets/main-C5Qun_s9.css">
 </head>
 <body>
 
@@ -381,6 +381,14 @@
     <div class="ci-chart-card" id="ci-chart-card" style="display:none;">
       <h3>📊 Actual vs. Projected</h3>
       <canvas id="ciChart"></canvas>
+    </div>
+    <div class="card trend-card" id="trend-card" style="display:none;">
+      <div class="trend-header">
+        <span class="trend-label">📉 Your Trend</span>
+        <span class="trend-rate" id="trend-rate"></span>
+      </div>
+      <p class="trend-detail" id="trend-detail"></p>
+      <p class="trend-footnote">Based on your last <span id="trend-count"></span> check-ins</p>
     </div>
     <div id="ci-entries-wrap"></div>
     <div class="ci-table-wrap" id="ci-table-wrap" style="display:none;"></div>
