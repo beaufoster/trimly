@@ -1132,7 +1132,7 @@ function toggleAccountMenu(){
 }
 async function signOutFromMenu(){
   closeAccountMenu();
-  showToast('Saving your data…',2500);
+  showToast('Saving your data…',1600);
   await signOut();
 }
 function closeAccountMenu(){
@@ -1198,11 +1198,8 @@ async function resendLink(){
 }
 async function signOut(){
   if(!sb)return;
-  try{
-    await Promise.race([syncUp(),new Promise(r=>setTimeout(r,3000))]);
-    await sb.auth.signOut({scope:'local'});
-  }catch(e){console.warn('[Trimly] sign-out error:',e);}
-  // Always clear local state regardless of any auth errors
+  // Sync up first (1.5s max), then clear everything immediately before any more async work
+  try{await Promise.race([syncUp(),new Promise(r=>setTimeout(r,1500))]);}catch(e){}
   [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed'].forEach(k=>localStorage.removeItem(k));
   checkins=[];planData=null;celebratedMilestones=[];
   currentUser=null;_otpEmail='';
@@ -1213,6 +1210,9 @@ async function signOut(){
   renderCheckinPage();
   showToast('Signed out. Your data is saved to your account.');
   ph.capture('signed_out');
+  // Revoke server session in background with timeout so it can never hang
+  try{await Promise.race([sb.auth.signOut({scope:'local'}),new Promise(r=>setTimeout(r,1500))]);}
+  catch(e){console.warn('[Trimly] sign-out error:',e);}
 }
 function flashSyncIndicator(){
   document.querySelectorAll('.account-btn.signed-in').forEach(b=>{
@@ -1279,6 +1279,7 @@ async function syncDown(){
 if(sb){
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==='SIGNED_OUT'){currentUser=null;updateSyncUI();return;}
+    if(event==='TOKEN_REFRESHED'&&!currentUser)return;
     currentUser=session?.user||null;
     updateSyncUI();
     if(currentUser&&(event==='SIGNED_IN'||event==='INITIAL_SESSION')){
