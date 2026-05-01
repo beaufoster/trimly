@@ -29,7 +29,9 @@ const ph = {
   reset(){if(IS_TEST||IS_OWNER)return;try{posthog.reset();}catch(e){}}
 };
 // ══ STATE ══════════════════════════════════════════
-let pace='steady', calcMode='weight', _paceOnly=false, currentUser=null, _syncInFlight=false, _syncTimer=null, _otpEmail='', _skipNextInitialSession=false;
+let pace='steady', calcMode='weight', _paceOnly=false, _syncInFlight=false, _syncTimer=null, _otpEmail='', _skipNextInitialSession=false;
+const _userHint=JSON.parse(localStorage.getItem(STORE+'user_hint')||'null');
+let currentUser=_userHint||null;
 const KG_TO_LBS=2.20462;
 let unitPref=localStorage.getItem(STORE+'unit')||'lbs';
 let _editId=null;
@@ -435,7 +437,9 @@ function calculate(){
     updateGoalDateDelta(gds);
     $('r-date').textContent=fmtDate(targetDate);$('r-rate').textContent=fmtWt(avgRate,2)+'/wk avg';$('r-loss').textContent=fmtWt(totalLost);
     renderMilestones(cw,projWt,avgRate,sim);renderProjChart(sim,cw,projWt);
-    planData={cw,gw:projWt,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'date'};
+    planData={cw,gw:projWt,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'date',
+      age:parseInt($('age').value)||35,htFt:parseInt($('ht-ft').value)||5,htIn:parseInt($('ht-in').value)||9,htCm:parseInt($('ht-cm').value)||175,
+      sex:$('sex').value||'male',act:parseInt($('actSl').value)||2,walk:parseInt($('walkSl').value)||30,lift:parseInt($('liftSl').value)||2,cardio:parseInt($('cardioSl').value)||1,pace};
     if(!_paceOnly){
       localStorage.setItem(STORE+'plan',JSON.stringify(planData));
       localStorage.setItem(STORE+'form',JSON.stringify({
@@ -463,7 +467,9 @@ function calculate(){
   updateGoalDateDelta(gds);
   $('r-date').textContent=fmtDate(goalDate);$('r-rate').textContent=fmtWt(avgRate,2)+'/wk avg';
   renderMilestones(cw,gw,avgRate,sim);renderProjChart(sim,cw,gw);
-  planData={cw,gw,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'weight'};
+  planData={cw,gw,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'weight',
+    age:parseInt($('age').value)||35,htFt:parseInt($('ht-ft').value)||5,htIn:parseInt($('ht-in').value)||9,htCm:parseInt($('ht-cm').value)||175,
+    sex:$('sex').value||'male',act:parseInt($('actSl').value)||2,walk:parseInt($('walkSl').value)||30,lift:parseInt($('liftSl').value)||2,cardio:parseInt($('cardioSl').value)||1,pace};
   if(!_paceOnly){
     localStorage.setItem(STORE+'plan',JSON.stringify(planData));
     localStorage.setItem(STORE+'form',JSON.stringify({
@@ -1079,7 +1085,7 @@ function importData(e){
       if(!confirm(`Import ${incoming} check-in${incoming===1?'':'s'}?${skipped>0?` (${skipped} duplicate date${skipped===1?'':'s'} will be skipped)`:''}  Your existing data won't be overwritten.`)){e.target.value='';return;}
       checkins=[...checkins,...newOnes].sort((a,b)=>new Date(a.date)-new Date(b.date));
       localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
-      if(!planData&&data.plan){planData=data.plan;localStorage.setItem(STORE+'plan',JSON.stringify(planData));}
+      if(!planData&&data.plan){planData=data.plan;localStorage.setItem(STORE+'plan',JSON.stringify(planData));restoreFormFromPlanData(planData);}
       if(!userName&&data.name){userName=data.name;localStorage.setItem(STORE+'name',userName);updateHeroGreeting();}
       if(data.celebrated){
         celebratedMilestones=[...new Set([...celebratedMilestones,...data.celebrated])];
@@ -1196,6 +1202,32 @@ async function resendLink(){
   $('sync-email').value=_otpEmail;
   await signIn();
 }
+function restoreFormFromPlanData(plan){
+  if(!plan)return;
+  if(plan.cw)$('cw').value=fmtD(fromLbs(plan.cw));
+  if(plan.gw!=null)$('gw').value=fmtD(fromLbs(plan.gw));
+  if(plan.age)$('age').value=plan.age;
+  if(plan.htFt!=null)$('ht-ft').value=plan.htFt;
+  if(plan.htIn!=null)$('ht-in').value=plan.htIn;
+  if(plan.htCm)$('ht-cm').value=plan.htCm;
+  if(plan.sex)$('sex').value=plan.sex;
+  if(plan.act)$('actSl').value=plan.act;
+  if(plan.cal)$('calSl').value=plan.cal;
+  if(plan.walk!=null)$('walkSl').value=plan.walk;
+  if(plan.lift!=null)$('liftSl').value=plan.lift;
+  if(plan.cardio!=null)$('cardioSl').value=plan.cardio;
+  if(plan.pace){pace=plan.pace;['gentle','steady','aggressive'].forEach(n=>{const b=$('sc-'+n);if(b)b.classList.toggle('active',n===pace);});}
+  if(plan.mode&&plan.mode!==calcMode){
+    calcMode=plan.mode;
+    $('mode-weight')?.classList.toggle('active',calcMode==='weight');
+    $('mode-date')?.classList.toggle('active',calcMode==='date');
+    const gwField=$('gw-field');if(gwField)gwField.style.display=calcMode==='weight'?'':'none';
+    const occSec=$('occasion-section');if(occSec)occSec.style.display=calcMode==='date'?'':'none';
+    const hint=$('occasion-hint');if(hint)hint.style.display=calcMode==='weight'?'block':'none';
+  }
+  if(plan.mode==='date'&&plan.goalDate)$('goalDate').value=plan.goalDate.split('T')[0];
+  updateUnitLabels();
+}
 function resetFormToDefaults(){
   const isKg=unitPref==='kg';
   $('cw').value=isKg?fmtD(180/KG_TO_LBS):180;
@@ -1215,7 +1247,7 @@ async function signOut(){
   clearTimeout(_syncTimer);
   // Sync up first (1.5s max), then clear everything immediately before any more async work
   try{await Promise.race([syncUp(),new Promise(r=>setTimeout(r,1500))]);}catch(e){}
-  [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed',STORE+'form',STORE+'name'].forEach(k=>localStorage.removeItem(k));
+  [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed',STORE+'form',STORE+'name',STORE+'user_hint'].forEach(k=>localStorage.removeItem(k));
   checkins=[];planData=null;celebratedMilestones=[];userName='';
   currentUser=null;_otpEmail='';
   ph.reset();
@@ -1307,8 +1339,10 @@ if(sb){
         [STORE+'checkins',STORE+'plan',STORE+'celebrated'].forEach(k=>localStorage.removeItem(k));
       }
       ph.identify(currentUser.id,{email:currentUser.email});
+      localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
       closeSyncSheet();
       await syncDown();
+      restoreFormFromPlanData(planData);
       await syncUp();
       renderCheckinPage();calculate();
       updateSyncUI();
@@ -1401,7 +1435,9 @@ async function checkSessionManually(){
       [STORE+'checkins',STORE+'plan',STORE+'celebrated'].forEach(k=>localStorage.removeItem(k));
       _skipNextInitialSession=true;
       ph.identify(currentUser.id,{email:currentUser.email});
+      localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
       await syncDown();
+      restoreFormFromPlanData(planData);
       await syncUp();
       renderCheckinPage();calculate();
       updateSyncUI();
