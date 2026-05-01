@@ -1196,18 +1196,32 @@ async function resendLink(){
   $('sync-email').value=_otpEmail;
   await signIn();
 }
+function resetFormToDefaults(){
+  const isKg=unitPref==='kg';
+  $('cw').value=isKg?fmtD(180/KG_TO_LBS):180;
+  $('gw').value=isKg?fmtD(155/KG_TO_LBS):155;
+  $('age').value=35;
+  $('ht-ft').value=5;$('ht-in').value=9;$('ht-cm').value=175;
+  $('sex').value='male';
+  $('calSl').value=1800;$('walkSl').value=30;$('liftSl').value=2;$('cardioSl').value=1;$('actSl').value=2;
+  pace='steady';
+  ['gentle','steady','aggressive'].forEach(n=>{const b=$('sc-'+n);if(b)b.classList.toggle('active',n==='steady');});
+  localStorage.removeItem(STORE+'form');
+  if(calcMode==='date')setMode('weight');else calculate();
+}
 async function signOut(){
   if(!sb)return;
   // Sync up first (1.5s max), then clear everything immediately before any more async work
   try{await Promise.race([syncUp(),new Promise(r=>setTimeout(r,1500))]);}catch(e){}
-  [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed'].forEach(k=>localStorage.removeItem(k));
-  checkins=[];planData=null;celebratedMilestones=[];
+  [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed',STORE+'form',STORE+'name'].forEach(k=>localStorage.removeItem(k));
+  checkins=[];planData=null;celebratedMilestones=[];userName='';
   currentUser=null;_otpEmail='';
   ph.reset();
   ph.identify(_deviceId);
   updateSyncUI();
   updateHeroGreeting();
   renderCheckinPage();
+  resetFormToDefaults();
   showToast('Signed out. Your data is saved to your account.');
   ph.capture('signed_out');
   // Revoke server session in background with timeout so it can never hang
@@ -1437,6 +1451,7 @@ window.toggleUnit = toggleUnit;
 window.checkSessionManually = checkSessionManually;
 window.acceptCookies = acceptCookies;
 window.declineCookies = declineCookies;
+window.resetFormToDefaults = resetFormToDefaults;
 
 window.addEventListener('resize',()=>{calculate();if($('page-checkin').classList.contains('active'))renderCheckinPage();});
 
