@@ -1343,11 +1343,11 @@ if(sb){
       closeSyncSheet();
       await syncDown();
       restoreFormFromPlanData(planData);
-      await syncUp();
       renderCheckinPage();calculate();
       updateSyncUI();
       if(event==='SIGNED_IN')showToast('✓ Signed in! Your data is backed up.');
       ph.capture('signed_in',{event});
+      syncUp().catch(()=>{});
     }
   });
 }
@@ -1421,10 +1421,10 @@ async function checkSessionManually(){
   const btn=$('sync-check-session-btn');
   if(btn){btn.textContent='Checking…';btn.disabled=true;}
   try{
-    // Retry up to 5x with 800ms backoff — iOS PWA needs time after magic link click
+    // Retry up to 4x with 400ms gaps — iOS PWA needs a moment after magic link click
     let sessionData=null;
-    for(let attempt=0;attempt<5;attempt++){
-      if(attempt>0)await new Promise(r=>setTimeout(r,800));
+    for(let attempt=0;attempt<4;attempt++){
+      if(attempt>0)await new Promise(r=>setTimeout(r,400));
       const{data}=await sb.auth.getSession();
       if(data?.session?.user){sessionData=data;break;}
     }
@@ -1438,11 +1438,11 @@ async function checkSessionManually(){
       localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
       await syncDown();
       restoreFormFromPlanData(planData);
-      await syncUp();
       renderCheckinPage();calculate();
       updateSyncUI();
       showToast('✓ Signed in! Your data is backed up.');
       ph.capture('signed_in',{event:'manual_session_check'});
+      syncUp().catch(()=>{});
     }else{
       if(btn){btn.textContent='Already clicked the link →';btn.disabled=false;}
       showToast('Session not found yet — make sure you clicked the link, then try again.');
