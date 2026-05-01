@@ -414,6 +414,9 @@ body.is-test{padding-top:26px;}
 .name-prompt-sheet input:focus{outline:none;border-color:var(--green-mid);}
 .name-prompt-submit{width:100%;background:var(--green);color:#fff;border:none;padding:14px;border-radius:11px;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:8px;}
 .name-prompt-skip{display:block;text-align:center;font-size:0.78rem;color:var(--gray);cursor:pointer;text-decoration:underline;padding:4px;}
+.name-prompt-skip-btn{display:block;width:100%;background:transparent;border:1.5px solid var(--border);color:var(--gray);padding:12px;border-radius:11px;font-size:0.9rem;cursor:pointer;margin-top:6px;font-family:inherit;}
+.name-prompt-skip-btn:active{background:var(--gray-light);}
+.occasion-hint{font-size:0.78rem;color:var(--gray);margin-top:8px;padding:0 2px;line-height:1.5;}
 
 /* ── DEMO MODE ── */
 .demo-btn{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:100px;padding:6px 14px;font-size:0.76rem;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;margin-top:10px;transition:all 0.15s;}

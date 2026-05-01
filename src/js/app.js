@@ -84,7 +84,7 @@ function updateHeroGreeting(){
 
 // ══ DEMO MODE ═══════════════════════════════════════
 function loadDemo(){
-  $('cw').value=fmtD(fromLbs(218));$('gw').value=fmtD(fromLbs(180));$('age').value=34;$('ht-ft').value=5;$('ht-in').value=9;$('sex').value='male';
+  $('cw').value=fmtD(fromLbs(218));$('gw').value=fmtD(fromLbs(180));$('age').value=34;$('ht-ft').value=5;$('ht-in').value=9;$('ht-cm').value=175;$('sex').value='male';
   $('calSl').value=1750;$('walkSl').value=45;$('liftSl').value=3;$('cardioSl').value=2;$('actSl').value=2;
   // Add 3 demo check-ins
   const today=new Date();
@@ -304,6 +304,7 @@ function setMode(m){
   $('mode-date').classList.toggle('active',m==='date');
   $('gw-field').style.display=m==='weight'?'':'none';
   $('occasion-section').style.display=m==='date'?'':'none';
+  const hint=$('occasion-hint');if(hint)hint.style.display=m==='weight'?'block':'none';
   if(m==='date'&&!$('goalDate').value){
     const d=new Date();d.setMonth(d.getMonth()+3);
     $('goalDate').value=d.toISOString().split('T')[0];
@@ -390,7 +391,7 @@ function simulateLoss(startWt,goalWt,calIntake,exPerDay,actMult,age,ht,sex,maxLb
 function calculate(){
   const cw=Math.max(toLbs(parseFloat($('cw').value)||210),50);
   const age=parseInt($('age').value)||35;
-  const ht=((parseInt($('ht-ft').value)||5)*12)+(parseInt($('ht-in').value)||10);
+  const ht=unitPref==='kg'?Math.round((parseInt($('ht-cm').value)||178)/2.54):((parseInt($('ht-ft').value)||5)*12)+(parseInt($('ht-in').value)||10);
   const sex=$('sex').value;
   const cal=parseInt($('calSl').value);
   const walk=parseInt($('walkSl').value);
@@ -438,7 +439,7 @@ function calculate(){
       localStorage.setItem(STORE+'plan',JSON.stringify(planData));
       localStorage.setItem(STORE+'form',JSON.stringify({
         cw:$('cw').value,gw:$('gw').value,age:$('age').value,
-        htFt:$('ht-ft').value,htIn:$('ht-in').value,sex:$('sex').value,
+        htFt:$('ht-ft').value,htIn:$('ht-in').value,htCm:$('ht-cm').value,sex:$('sex').value,
         cal:$('calSl').value,walk:$('walkSl').value,lift:$('liftSl').value,
         cardio:$('cardioSl').value,act:$('actSl').value,
         goalDate:$('goalDate').value,pace,mode:calcMode
@@ -695,7 +696,7 @@ function addCheckin(){
   if(!date){fail('Please select a date.');return;}
   if(date>new Date().toISOString().split('T')[0]){fail('Date can\'t be in the future.');return;}
   if(checkins.find(c=>c.date===date&&c.id!==_editId)){fail('You already logged a check-in for this date.');return;}
-  if(!weightRaw||weight<50||weight>600){fail('Enter a valid weight ('+(unitPref==='kg'?'23–272 kg':'50–600 lbs')+').');return;}
+  if(!weightRaw||weight<50||weight>500){fail('Enter a valid weight ('+(unitPref==='kg'?'23–227 kg':'50–500 lbs')+').');return;}
   // Handle edit mode — remove old entry, track old date for Supabase
   const isEdit=_editId!==null;
   let oldDate=null;
@@ -716,6 +717,7 @@ function addCheckin(){
     const addBtn=$('btn-add-checkin');if(addBtn)addBtn.textContent='Log It ✓';
     const cancelBtn=$('btn-cancel-edit');if(cancelBtn)cancelBtn.style.display='none';
     const heading=$('checkin-form-heading');if(heading)heading.textContent='➕ Log This Week';
+    if(btn)btn.disabled=false;
     ph.capture('checkin_edited');
     showToast('Check-in updated!');
     renderCheckinPage();calculate();
@@ -735,6 +737,7 @@ function addCheckin(){
     setTimeout(()=>celebrate('🔥',`${newStreak}-Week Streak!`,msgs[newStreak]),800);
     ph.capture('milestone_celebrated',{milestone:`${newStreak}-week streak`,pct:null});
   }
+  if(btn)btn.disabled=false;
   renderCheckinPage();calculate();
 }
 
@@ -858,7 +861,7 @@ function downloadPDF(){
 // ══ EVENTS ═════════════════════════════════════════════
 let _calcTimer;
 function debouncedCalculate(){clearTimeout(_calcTimer);_calcTimer=setTimeout(calculate,150);}
-['cw','gw','age','ht-ft','ht-in','sex','calSl','walkSl','liftSl','cardioSl','actSl','goalDate'].forEach(id=>{
+['cw','gw','age','ht-ft','ht-in','ht-cm','sex','calSl','walkSl','liftSl','cardioSl','actSl','goalDate'].forEach(id=>{
   const el=$(id);
   if(el) el.addEventListener('input',()=>{
     debouncedCalculate();
@@ -900,7 +903,7 @@ document.addEventListener('keydown',e=>{
 const _cookieConsent=localStorage.getItem('trimly_cookie_consent');
 function _initPosthog(){
   if(IS_TEST||IS_OWNER||PH_KEY==='YOUR_POSTHOG_KEY')return;
-  try{posthog.init(PH_KEY,{api_host:'https://us.i.posthog.com',person_profiles:'identified_only'});}catch(e){}
+  try{posthog.init(PH_KEY,{api_host:'https://us.i.posthog.com',person_profiles:'identified_only',capture_performance:true});}catch(e){}
   try{posthog.identify(_deviceId);}catch(e){}
 }
 function acceptCookies(){
@@ -922,6 +925,7 @@ if(savedForm){
   if(savedForm.age) $('age').value=savedForm.age;
   if(savedForm.htFt)$('ht-ft').value=savedForm.htFt;
   if(savedForm.htIn)$('ht-in').value=savedForm.htIn;
+  if(savedForm.htCm)$('ht-cm').value=savedForm.htCm;
   if(savedForm.sex) $('sex').value=savedForm.sex;
   if(savedForm.cal) $('calSl').value=savedForm.cal;
   if(savedForm.walk)$('walkSl').value=savedForm.walk;
@@ -938,6 +942,8 @@ if(savedForm){
   const cwEl=$('cw'),gwEl=$('gw');
   if(cwEl)cwEl.value=fmtD(fromLbs(parseFloat(cwEl.value)||210));
   if(gwEl)gwEl.value=fmtD(fromLbs(parseFloat(gwEl.value)||175));
+  const ftEl=$('ht-ft'),inEl=$('ht-in'),cmEl=$('ht-cm');
+  if(ftEl&&inEl&&cmEl)cmEl.value=Math.round((parseInt(ftEl.value)||5)*30.48+(parseInt(inEl.value)||10)*2.54);
 }
 
 updateUnitLabels();
@@ -1259,6 +1265,13 @@ function toggleUnit(){
     const el=$(id);
     if(el&&el.value){const v=parseFloat(el.value);if(!isNaN(v))el.value=fmtD(old==='lbs'?v/KG_TO_LBS:v*KG_TO_LBS);}
   });
+  const ftEl=$('ht-ft'),inEl=$('ht-in'),cmEl=$('ht-cm');
+  if(old==='lbs'&&ftEl&&inEl&&cmEl){
+    cmEl.value=Math.round((parseInt(ftEl.value)||5)*30.48+(parseInt(inEl.value)||10)*2.54);
+  }else if(old==='kg'&&ftEl&&inEl&&cmEl){
+    const totalIn=(parseInt(cmEl.value)||178)/2.54;
+    ftEl.value=Math.floor(totalIn/12);inEl.value=Math.round(totalIn%12);
+  }
   const ciWt=$('ci-weight');
   if(ciWt&&ciWt.value){const v=parseFloat(ciWt.value);if(!isNaN(v))ciWt.value=fmtD(old==='lbs'?v/KG_TO_LBS:v*KG_TO_LBS);}
   // If editing, convert the edit form value too
@@ -1275,6 +1288,9 @@ function updateUnitLabels(){
   document.querySelectorAll('.unit-sfx').forEach(el=>el.textContent=unitPref);
   const ciLbl=$('lbl-ci-weight');if(ciLbl)ciLbl.textContent='Weight ('+unitPref+')';
   const btn=$('unit-toggle-btn');if(btn)btn.textContent=unitPref==='lbs'?'kg':'lbs';
+  const ftRow=$('ht-ft-row'),cmRow=$('ht-cm-row');
+  if(ftRow)ftRow.style.display=unitPref==='kg'?'none':'flex';
+  if(cmRow)cmRow.style.display=unitPref==='kg'?'flex':'none';
 }
 
 // ══ iOS MAGIC LINK SESSION CHECK ══════════════════════
