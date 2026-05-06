@@ -1,5 +1,6 @@
 import posthog from 'posthog-js';
 import { sb } from './supabase.js';
+import { KG_TO_LBS as _KG_TO_LBS, calcBMR, simulateLoss, addWeeks, calcStreakFromEntries, calcTrendFromEntries } from './utils.js';
 
 // ══ TEST ENVIRONMENT ═══════════════════════════════
 const IS_TEST = new URLSearchParams(window.location.search).get('env') === 'test';
@@ -32,7 +33,7 @@ const ph = {
 let pace='steady', calcMode='weight', _paceOnly=false, _syncInFlight=false, _syncTimer=null, _otpEmail='', _skipNextInitialSession=false;
 const _userHint=JSON.parse(localStorage.getItem(STORE+'user_hint')||'null');
 let currentUser=_userHint||null;
-const KG_TO_LBS=2.20462;
+const KG_TO_LBS=_KG_TO_LBS;
 let unitPref=localStorage.getItem(STORE+'unit')||'lbs';
 let _editId=null;
 let checkins=JSON.parse(localStorage.getItem(STORE+'checkins')||'[]');
@@ -55,15 +56,14 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Math.round(n).toLocaleString();
 const fmtD=(n,d=1)=>(+n).toFixed(d);
 const escapeHtml=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-function addWeeks(d,w){const x=new Date(d);x.setDate(x.getDate()+Math.round(w*7));return x;}
 function fmtDate(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
-function calcBMR(wt,ht,age,sex){const kg=wt*0.453592,cm=ht*2.54;return sex==='male'?10*kg+6.25*cm-5*age+5:10*kg+6.25*cm-5*age-161;}
 function toLbs(v){return unitPref==='kg'?v*KG_TO_LBS:v;}
 function fromLbs(v){return unitPref==='kg'?v/KG_TO_LBS:v;}
 function fmtWt(lbs,d=1){return fmtD(fromLbs(lbs),d)+' '+unitPref;}
 
 // ══ NAME PROMPT ═════════════════════════════════════
 function showNamePrompt(){
+  if(userName) return;
   const overlay=$('name-prompt-overlay');
   if(overlay) overlay.classList.add('show');
   setTimeout(()=>$('name-input').focus(),300);
@@ -72,6 +72,7 @@ function saveName(skip=false){
   const val=skip?'':($('name-input').value.trim());
   userName=val;
   localStorage.setItem(STORE+'name',val);
+  if(planData){planData.name=val;localStorage.setItem(STORE+'plan',JSON.stringify(planData));scheduleSyncUp();}
   const overlay=$('name-prompt-overlay');
   if(overlay) overlay.classList.remove('show');
   updateHeroGreeting();
@@ -79,9 +80,15 @@ function saveName(skip=false){
 }
 function updateHeroGreeting(){
   const el=$('hero-greeting');
+  const nameLine=$('hero-name-line');
   if(!el) return;
-  if(userName) el.textContent=`Hey ${userName}! Adjust your plan and watch the results update live.`;
-  else el.textContent='Adjust diet & exercise — watch your results update live.';
+  if(userName){
+    if(nameLine){nameLine.textContent=`Hi, ${userName}! 👋`;nameLine.style.display='block';}
+    el.textContent='Adjust your plan and watch the results update live.';
+  }else{
+    if(nameLine)nameLine.style.display='none';
+    el.textContent='Adjust diet & exercise — watch your results update live.';
+  }
 }
 
 // ══ DEMO MODE ═══════════════════════════════════════
@@ -222,23 +229,7 @@ function dismissCelebration(){
 }
 
 // ══ STREAK ══════════════════════════════════════════
-function calcStreak(){
-  if(!checkins.length)return 0;
-  const sorted=[...checkins].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  let streak=1;
-  for(let i=1;i<sorted.length;i++){
-    const d1=new Date(sorted[i-1].date+'T12:00');
-    const d2=new Date(sorted[i].date+'T12:00');
-    const diff=(d1-d2)/(7*24*3600*1000);
-    if(diff>=0.5&&diff<=1.8)streak++;
-    else break;
-  }
-  // Check if most recent check-in is within last 10 days (streak still alive)
-  const lastDate=new Date(sorted[0].date+'T12:00');
-  const daysSince=(new Date()-lastDate)/(24*3600*1000);
-  if(daysSince>10)return 0;
-  return streak;
-}
+function calcStreak(){return calcStreakFromEntries(checkins);}
 
 function renderStreakUI(){
   const streak=calcStreak();
@@ -376,24 +367,32 @@ function renderProgressSnap(){
   badge.className='pace-badge '+bCls;badge.textContent=bTxt;
 }
 
-// ══ SIMULATE ════════════════════════════════════════
-function simulateLoss(startWt,goalWt,calIntake,exPerDay,actMult,age,ht,sex,maxLbs){
-  const weeks=[];let wt=startWt,w=0;
-  while(wt>goalWt+0.05&&w<520){
-    const bmr=calcBMR(wt,ht,age,sex);
-    const tdee=bmr*actMult+exPerDay;
-    const safe=Math.max(calIntake,1200);
-    let def=Math.min(Math.max(tdee-safe,0),maxLbs*3500/7);
-    const lb=Math.min((def*7)/3500,wt-goalWt);
-    wt=Math.max(wt-lb,goalWt);
-    weeks.push({week:w+1,weight:+wt.toFixed(1)});
-    w++;
-  }
-  return weeks;
-}
+// simulateLoss and calcBMR imported from utils.js
 
 // ══ CALCULATE ════════════════════════════════════════
+function validateWeights(){
+  const cwRaw=parseFloat($('cw').value);
+  const gwRaw=parseFloat($('gw').value);
+  const warnEl=$('wt-warn');const msgEl=$('wt-warn-msg');
+  if(!warnEl)return true;
+  if(cwRaw){
+    const cwLbs=toLbs(cwRaw);
+    const minLbs=unitPref==='kg'?18:40;
+    const maxLbs=unitPref==='kg'?300:650;
+    if(cwLbs<minLbs||cwLbs>maxLbs){
+      msgEl.textContent=`Enter a realistic current weight (${unitPref==='kg'?'18–300 kg':'40–650 lbs'}).`;
+      warnEl.style.display='flex';return false;
+    }
+    if(calcMode==='weight'&&gwRaw&&toLbs(gwRaw)>=cwLbs){
+      msgEl.textContent='Goal weight must be less than current weight.';
+      warnEl.style.display='flex';return false;
+    }
+  }
+  warnEl.style.display='none';return true;
+}
+
 function calculate(){
+  if(!validateWeights())return;
   const cw=Math.max(toLbs(parseFloat($('cw').value)||210),50);
   const age=parseInt($('age').value)||35;
   const ht=unitPref==='kg'?Math.round((parseInt($('ht-cm').value)||178)/2.54):((parseInt($('ht-ft').value)||5)*12)+(parseInt($('ht-in').value)||10);
@@ -440,8 +439,8 @@ function calculate(){
     $('r-date').textContent=fmtDate(targetDate);$('r-rate').textContent=fmtWt(avgRate,2)+'/wk avg';$('r-loss').textContent=fmtWt(totalLost);
     renderMilestones(cw,projWt,avgRate,sim);renderProjChart(sim,cw,projWt);
     planData={cw,gw:projWt,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'date',
-      age:parseInt($('age').value)||35,htFt:parseInt($('ht-ft').value)||5,htIn:parseInt($('ht-in').value)||9,htCm:parseInt($('ht-cm').value)||175,
-      sex:$('sex').value||'male',act:parseInt($('actSl').value)||2,walk:parseInt($('walkSl').value)||30,lift:parseInt($('liftSl').value)||2,cardio:parseInt($('cardioSl').value)||1,pace};
+      age:parseInt($('age').value)||35,htFt:parseInt($('ht-ft').value)||5,htIn:parseInt($('ht-in').value)||10,htCm:parseInt($('ht-cm').value)||178,
+      sex:$('sex').value||'male',act:parseInt($('actSl').value)||2,walk:parseInt($('walkSl').value)||30,lift:parseInt($('liftSl').value)||2,cardio:parseInt($('cardioSl').value)||1,pace,name:userName||undefined};
     if(!_paceOnly){
       localStorage.setItem(STORE+'plan',JSON.stringify(planData));
       localStorage.setItem(STORE+'form',JSON.stringify({
@@ -470,8 +469,8 @@ function calculate(){
   $('r-date').textContent=fmtDate(goalDate);$('r-rate').textContent=fmtWt(avgRate,2)+'/wk avg';
   renderMilestones(cw,gw,avgRate,sim);renderProjChart(sim,cw,gw);
   planData={cw,gw,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'weight',
-    age:parseInt($('age').value)||35,htFt:parseInt($('ht-ft').value)||5,htIn:parseInt($('ht-in').value)||9,htCm:parseInt($('ht-cm').value)||175,
-    sex:$('sex').value||'male',act:parseInt($('actSl').value)||2,walk:parseInt($('walkSl').value)||30,lift:parseInt($('liftSl').value)||2,cardio:parseInt($('cardioSl').value)||1,pace};
+    age:parseInt($('age').value)||35,htFt:parseInt($('ht-ft').value)||5,htIn:parseInt($('ht-in').value)||10,htCm:parseInt($('ht-cm').value)||178,
+    sex:$('sex').value||'male',act:parseInt($('actSl').value)||2,walk:parseInt($('walkSl').value)||30,lift:parseInt($('liftSl').value)||2,cardio:parseInt($('cardioSl').value)||1,pace,name:userName||undefined};
   if(!_paceOnly){
     localStorage.setItem(STORE+'plan',JSON.stringify(planData));
     localStorage.setItem(STORE+'form',JSON.stringify({
@@ -582,32 +581,8 @@ function renderProjChart(sim,cw,gw){
 
 // ══ TREND PROJECTION ══════════════════════════════════
 function calcTrend(){
-  if(checkins.length<3)return null;
-  const plan=planData||JSON.parse(localStorage.getItem(STORE+'plan')||'null');
-  const sorted=[...checkins].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  const origin=new Date(sorted[0].date+'T12:00');
-  const pts=sorted.map(ci=>{
-    const d=new Date(ci.date+'T12:00');
-    return{week:(d-origin)/(7*24*3600*1000),weight:ci.weight};
-  });
-  const n=pts.length;
-  const sumX=pts.reduce((a,p)=>a+p.week,0),sumY=pts.reduce((a,p)=>a+p.weight,0);
-  const sumXY=pts.reduce((a,p)=>a+p.week*p.weight,0),sumX2=pts.reduce((a,p)=>a+p.week*p.week,0);
-  const denom=n*sumX2-sumX*sumX;
-  if(denom===0)return null;
-  const slope=(n*sumXY-sumX*sumY)/denom;
-  const intercept=(sumY-slope*sumX)/n;
-  const goalWt=plan?plan.gw:null;
-  let weeksToGoal=null,projGoalDate=null;
-  if(goalWt!==null&&slope<-0.01){
-    const weeksFromOriginToGoal=(goalWt-intercept)/slope;
-    const weeksFromNow=weeksFromOriginToGoal-pts[n-1].week;
-    if(weeksFromNow>0&&weeksFromNow<520){
-      weeksToGoal=Math.round(weeksFromNow);
-      projGoalDate=addWeeks(new Date(),weeksFromNow);
-    }
-  }
-  return{slope,weeksToGoal,projGoalDate,goalWt,n};
+  const goalWt=planData?planData.gw:null;
+  return calcTrendFromEntries(checkins,goalWt);
 }
 function renderTrendCard(){
   const card=$('trend-card');
@@ -684,6 +659,8 @@ function renderCheckinPage(){
   });
   $('ci-entries-wrap').innerHTML='<div class="ci-entries">'+html+'</div>';
   $('ci-chart-card').style.display='block';
+  const emptyHint=$('ci-chart-empty');
+  if(emptyHint)emptyHint.style.display=checkins.length<3?'block':'none';
   renderCheckinChart(sorted,plan,startWt,goalWt);
   renderTrendCard();
   updateSyncUI();
@@ -807,6 +784,8 @@ function addCheckin(){
   }
   if(btn)btn.disabled=false;
   renderCheckinPage();calculate();
+  // Force-clear after render in case browser restores previous input value
+  setTimeout(()=>{const f=$('ci-weight');if(f&&!_editId)f.value='';},50);
 }
 
 function deleteCheckin(id){
@@ -1023,7 +1002,8 @@ updateHeroGreeting();
 updateSyncUI();
 
 // Show name prompt after first meaningful interaction (or 20s if idle)
-if(!userName && !IS_TEST){
+// Skip entirely for signed-in users — their name will be restored from the cloud
+if(!userName && !IS_TEST && !localStorage.getItem(STORE+'user_hint')){
   let namePromptShown=false;
   const showPromptOnce=()=>{if(namePromptShown)return;namePromptShown=true;showNamePrompt();};
   document.querySelectorAll('input[type=range],input[type=number],select').forEach(el=>{
@@ -1120,8 +1100,8 @@ function updateSyncUI(){
   const personIcon='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
   if(currentUser){
     const email=currentUser.email||'';
-    const initial=(email[0]||'?').toUpperCase();
-    acctBtns.forEach(b=>{b.style.display='flex';b.textContent=initial;b.classList.add('signed-in');b.title='Account: '+email;});
+    const initial=(userName?userName[0]:email[0]||'?').toUpperCase();
+    acctBtns.forEach(b=>{b.style.display='flex';b.textContent=initial;b.classList.add('signed-in');b.title=(userName?userName+' — ':'')+'Account: '+email;});
     if(nudge)nudge.style.display='none';
   } else {
     acctBtns.forEach(b=>{b.style.display='flex';b.innerHTML=personIcon+'<span>Sign In</span>';b.classList.remove('signed-in');b.title='Sign in to sync your data';});
@@ -1205,6 +1185,7 @@ async function resendLink(){
 }
 function restoreFormFromPlanData(plan){
   if(!plan)return;
+  if(plan.name&&!userName){userName=plan.name;localStorage.setItem(STORE+'name',userName);}
   if(plan.cw)$('cw').value=fmtD(fromLbs(plan.cw));
   if(plan.gw!=null)$('gw').value=fmtD(fromLbs(plan.gw));
   if(plan.age)$('age').value=plan.age;
@@ -1228,13 +1209,14 @@ function restoreFormFromPlanData(plan){
   }
   if(plan.mode==='date'&&plan.goalDate)$('goalDate').value=plan.goalDate.split('T')[0];
   updateUnitLabels();
+  updateHeroGreeting();
 }
 function resetFormToDefaults(){
   const isKg=unitPref==='kg';
   $('cw').value=isKg?fmtD(180/KG_TO_LBS):180;
   $('gw').value=isKg?fmtD(155/KG_TO_LBS):155;
   $('age').value=35;
-  $('ht-ft').value=5;$('ht-in').value=9;$('ht-cm').value=175;
+  $('ht-ft').value=5;$('ht-in').value=10;$('ht-cm').value=178;
   $('sex').value='male';
   $('calSl').value=1800;$('walkSl').value=30;$('liftSl').value=2;$('cardioSl').value=1;$('actSl').value=2;
   pace='steady';
@@ -1341,17 +1323,27 @@ if(sb){
       // On a new sign-in, wipe local state first so a different user's local
       // data can't contaminate this user's account via syncUp
       if(event==='SIGNED_IN'){
+        const preSigninPlan=planData;
+        const preSigninCheckins=[...checkins];
         checkins=[];planData=null;celebratedMilestones=[];
         [STORE+'checkins',STORE+'plan',STORE+'celebrated'].forEach(k=>localStorage.removeItem(k));
+        ph.identify(currentUser.id,{email:currentUser.email});
+        localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
+        closeSyncSheet();
+        await syncDown();
+        // New user with no remote data: restore the plan they set up before signing in
+        if(!planData&&preSigninPlan){planData=preSigninPlan;localStorage.setItem(STORE+'plan',JSON.stringify(planData));}
+        if(!checkins.length&&preSigninCheckins.length){checkins=preSigninCheckins;localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));}
+      }else{
+        ph.identify(currentUser.id,{email:currentUser.email});
+        localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
+        closeSyncSheet();
+        await syncDown();
       }
-      ph.identify(currentUser.id,{email:currentUser.email});
-      localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
-      closeSyncSheet();
-      await syncDown();
       restoreFormFromPlanData(planData);
       renderCheckinPage();calculate();
       updateSyncUI();
-      if(event==='SIGNED_IN')showToast('✓ Signed in! Your data is backed up.');
+      if(event==='SIGNED_IN')showToast(`✓ Welcome back${userName?', '+userName:''}! Your data is backed up.`);
       ph.capture('signed_in',{event});
       syncUp().catch(()=>{});
     }
@@ -1511,6 +1503,7 @@ function updateOfflineBanner(){
 }
 window.addEventListener('online',()=>{updateOfflineBanner();if(currentUser)syncUp();});
 window.addEventListener('offline',updateOfflineBanner);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&currentUser){clearTimeout(_syncTimer);syncUp().catch(()=>{});}});
 updateOfflineBanner();
 
 // Close account menu when clicking outside it
