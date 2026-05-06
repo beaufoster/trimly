@@ -10,8 +10,8 @@
 <title>Trimly — Weight Loss Calculator</title>
 <link rel="manifest" href="/trimly/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/trimly/assets/main-CLoQS4VX.js"></script>
-  <link rel="stylesheet" crossorigin href="/trimly/assets/main-C5Qun_s9.css">
+  <script type="module" crossorigin src="/trimly/assets/main-DaXRlxF7.js"></script>
+  <link rel="stylesheet" crossorigin href="/trimly/assets/main-D_FLZX6e.css">
 </head>
 <body>
 
@@ -102,6 +102,7 @@
       <div class="hero-logo">Trim<em>ly</em></div>
       <button class="account-btn" id="account-btn-hero" onclick="toggleAccountMenu()" aria-label="Account" style="display:none;"></button>
     </div>
+    <p id="hero-name-line" style="display:none;"></p>
     <h1>See Your Weight Loss <em>Before It Starts</em></h1>
     <p id="hero-greeting">Adjust diet & exercise — watch your results update live.</p>
     <div class="streak-pill hidden" id="hero-streak-pill">🔥 <span id="hero-streak-num">0</span> week streak!</div>
@@ -141,54 +142,6 @@
 
   <div class="scroll-content">
 
-    <!-- STREAK CARD -->
-    <div class="streak-card hidden" id="streak-card" style="margin-top:16px;">
-      <div class="streak-fire">🔥</div>
-      <div class="streak-info">
-        <div class="streak-num"><span id="streak-num">0</span> Week Streak</div>
-        <div class="streak-lbl">Consecutive weekly check-ins</div>
-        <div class="streak-next" id="streak-next"></div>
-      </div>
-    </div>
-
-    <!-- PROGRESS SNAPSHOT -->
-    <div class="progress-snap card" id="progress-snap" style="margin-top:16px;">
-      <div class="snap-header">
-        <h3>📍 Your Progress</h3>
-        <span class="pace-badge on" id="snap-badge">On Track</span>
-      </div>
-      <div class="snap-stats">
-        <div class="snap-stat"><div class="sn" id="snap-start">—</div><div class="sl">Started</div></div>
-        <div class="snap-stat"><div class="sn" id="snap-current">—</div><div class="sl">Current</div></div>
-        <div class="snap-stat"><div class="sn" id="snap-lost" style="color:var(--green)">—</div><div class="sl">Lost</div></div>
-      </div>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar-labels">
-          <span id="snap-start-lbl">Start</span>
-          <span id="snap-pct">0%</span>
-          <span id="snap-goal-lbl">Goal</span>
-        </div>
-        <div class="progress-bar-track">
-          <div class="progress-bar-fill" id="snap-fill" style="width:0%"></div>
-          <div class="progress-bar-proj" id="snap-proj-marker" style="left:0%"></div>
-        </div>
-        <div class="snap-foot">
-          <span id="snap-weeks-done">Week 0</span>
-          <span id="snap-pace-detail"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- PLATEAU BANNER (hidden by default) -->
-    <div class="banner plateau hidden" id="plateau-banner" style="margin-top:16px;">
-      <span class="bico">📊</span>
-      <div>
-        <strong>You're in a plateau — that's normal!</strong>
-        <span id="plateau-msg">Your weight has been stable for a few weeks.</span>
-        <div class="plateau-tips" id="plateau-tips"></div>
-      </div>
-    </div>
-
     <!-- MODE TOGGLE -->
     <div style="margin-top:16px;">
       <div class="section-label">How do you want to plan?</div>
@@ -226,12 +179,15 @@
       <div class="field-row">
         <div class="field">
           <label>Current Weight</label>
-          <div class="inp-wrap"><input type="number" id="cw" value="210" min="80" max="500" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
+          <div class="inp-wrap"><input type="number" id="cw" value="210" min="80" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
         </div>
         <div class="field" id="gw-field">
           <label>Goal Weight</label>
-          <div class="inp-wrap"><input type="number" id="gw" value="175" min="80" max="500" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
+          <div class="inp-wrap"><input type="number" id="gw" value="175" min="50" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
         </div>
+      </div>
+      <div id="wt-warn" class="banner warn" style="display:none;margin-bottom:4px;">
+        <span class="bico">⚠️</span><div id="wt-warn-msg"></div>
       </div>
       <div class="field-row">
         <div class="field">
@@ -337,6 +293,54 @@
       </div>
     </div>
 
+    <!-- STREAK CARD -->
+    <div class="streak-card hidden" id="streak-card" style="margin-top:16px;">
+      <div class="streak-fire">🔥</div>
+      <div class="streak-info">
+        <div class="streak-num"><span id="streak-num">0</span> Week Streak</div>
+        <div class="streak-lbl">Consecutive weekly check-ins</div>
+        <div class="streak-next" id="streak-next"></div>
+      </div>
+    </div>
+
+    <!-- PROGRESS SNAPSHOT -->
+    <div class="progress-snap card" id="progress-snap" style="margin-top:16px;">
+      <div class="snap-header">
+        <h3>📍 Your Progress</h3>
+        <span class="pace-badge on" id="snap-badge">On Track</span>
+      </div>
+      <div class="snap-stats">
+        <div class="snap-stat"><div class="sn" id="snap-start">—</div><div class="sl">Started</div></div>
+        <div class="snap-stat"><div class="sn" id="snap-current">—</div><div class="sl">Current</div></div>
+        <div class="snap-stat"><div class="sn" id="snap-lost" style="color:var(--green)">—</div><div class="sl">Lost</div></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-labels">
+          <span id="snap-start-lbl">Start</span>
+          <span id="snap-pct">0%</span>
+          <span id="snap-goal-lbl">Goal</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="snap-fill" style="width:0%"></div>
+          <div class="progress-bar-proj" id="snap-proj-marker" style="left:0%"></div>
+        </div>
+        <div class="snap-foot">
+          <span id="snap-weeks-done">Week 0</span>
+          <span id="snap-pace-detail"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLATEAU BANNER (hidden by default) -->
+    <div class="banner plateau hidden" id="plateau-banner" style="margin-top:16px;">
+      <span class="bico">📊</span>
+      <div>
+        <strong>You're in a plateau — that's normal!</strong>
+        <span id="plateau-msg">Your weight has been stable for a few weeks.</span>
+        <div class="plateau-tips" id="plateau-tips"></div>
+      </div>
+    </div>
+
     <p class="app-footer-link"><a href="privacy.html" target="_blank">Privacy Policy</a></p>
   </div><!-- /scroll-content -->
   </div><!-- /desktop-left -->
@@ -381,6 +385,7 @@
     <div class="ci-chart-card" id="ci-chart-card" style="display:none;">
       <h3>📊 Actual vs. Projected</h3>
       <canvas id="ciChart"></canvas>
+      <div id="ci-chart-empty" class="ci-chart-empty" style="display:none;">Your trend line appears after 3 check-ins.</div>
     </div>
     <div class="card trend-card" id="trend-card" style="display:none;">
       <div class="trend-header">
@@ -399,10 +404,10 @@
     <div class="sync-nudge" id="sync-nudge" style="display:none;" onclick="openSyncSheet()">
       <span class="sync-nudge-ico">☁️</span>
       <div class="sync-nudge-text">
-        <strong>Back up your progress</strong>
-        <span>Create a free account — never lose your data.</span>
+        <strong>Sync your plan across devices</strong>
+        <span>Free account — access from any device, any time.</span>
       </div>
-      <span class="sync-nudge-arrow">Save →</span>
+      <span class="sync-nudge-arrow">Sync →</span>
       <button class="sync-nudge-dismiss" onclick="event.stopPropagation();dismissSyncNudge()" aria-label="Dismiss">✕</button>
     </div>
 
