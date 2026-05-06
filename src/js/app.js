@@ -95,8 +95,8 @@ function updateHeroGreeting(){
 function loadDemo(){
   if(checkins.length>0&&!confirm('This will replace your check-ins with demo data. Continue?'))return;
   cancelEditCheckin();
-  $('cw').value=fmtD(fromLbs(218));$('gw').value=fmtD(fromLbs(180));$('age').value=34;$('ht-ft').value=5;$('ht-in').value=9;$('ht-cm').value=175;$('sex').value='male';
-  $('calSl').value=1750;$('walkSl').value=45;$('liftSl').value=3;$('cardioSl').value=2;$('actSl').value=2;
+  $('cw').value=fmtD(fromLbs(218));$('gw').value=fmtD(fromLbs(180));$('age').value=35;$('ht-ft').value=5;$('ht-in').value=10;$('ht-cm').value=178;$('sex').value='male';
+  $('calSl').value=1800;$('walkSl').value=30;$('liftSl').value=2;$('cardioSl').value=1;$('actSl').value=2;
   // Add 3 demo check-ins
   const today=new Date();
   const demo=[
@@ -1191,7 +1191,7 @@ async function resendLink(){
 }
 function restoreFormFromPlanData(plan){
   if(!plan)return;
-  if(plan.name&&!userName){userName=plan.name;localStorage.setItem(STORE+'name',userName);}
+  if(plan.name){userName=plan.name;localStorage.setItem(STORE+'name',userName);}
   if(plan.cw)$('cw').value=fmtD(fromLbs(plan.cw));
   if(plan.gw!=null)$('gw').value=fmtD(fromLbs(plan.gw));
   if(plan.age)$('age').value=plan.age;
@@ -1247,13 +1247,13 @@ async function signOut(){
   resetFormToDefaults();
   showToast('Signed out. Your data is saved to your account.');
   ph.capture('signed_out');
-  // Mark this session as explicitly signed out so INITIAL_SESSION can't auto-restore
-  // a residual access token on pull-to-refresh. Uses sessionStorage so it clears when
-  // the tab is closed (allowing normal auto-sign-in on a fresh tab).
+  // Block INITIAL_SESSION from auto-restoring the session on pull-to-refresh within
+  // this tab session. Uses sessionStorage (persists through refreshes, cleared on tab close).
   sessionStorage.setItem(STORE+'signed_out','1');
-  // Revoke server refresh token so the session can't be re-established from a new tab
-  // after the sessionStorage flag is gone.
-  try{await Promise.race([sb.auth.signOut({scope:'global'}),new Promise(r=>setTimeout(r,1500))]);}
+  // scope:'local' clears the local token. We avoid scope:'global' because it revokes
+  // all server sessions including any newly created by a magic link re-sign-in, which
+  // causes the new session to silently expire and wipe data on the next page refresh.
+  try{await Promise.race([sb.auth.signOut({scope:'local'}),new Promise(r=>setTimeout(r,1500))]);}
   catch(e){console.warn('[Trimly] sign-out error:',e);}
 }
 function flashSyncIndicator(){
@@ -1337,8 +1337,8 @@ if(sb){
       if(event==='SIGNED_IN'){
         const preSigninPlan=planData;
         const preSigninCheckins=[...checkins];
-        checkins=[];planData=null;celebratedMilestones=[];
-        [STORE+'checkins',STORE+'plan',STORE+'celebrated'].forEach(k=>localStorage.removeItem(k));
+        checkins=[];planData=null;celebratedMilestones=[];userName='';
+        [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'name'].forEach(k=>localStorage.removeItem(k));
         ph.identify(currentUser.id,{email:currentUser.email});
         localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
         closeSyncSheet();
