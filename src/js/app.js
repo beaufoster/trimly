@@ -826,6 +826,7 @@ function showPage(name){
   $('page-'+name).classList.add('active');
   ['calculator','checkin'].forEach(n=>{const t=$('tab-'+n);if(t)t.classList.toggle('active',n===name);});
   document.querySelectorAll('.desktop-nav-tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().includes(name==='calculator'?'calc':'check')));
+  localStorage.setItem(STORE+'page',name);
   ph.capture('page_viewed',{page:name});
   window.scrollTo(0,0);
   if(name==='checkin'){renderCheckinPage();setTimeout(()=>$('ci-weight').focus(),100);}
@@ -1000,6 +1001,10 @@ updateUnitLabels();
 calculate();
 updateHeroGreeting();
 updateSyncUI();
+
+// Restore the last active page so pull-to-refresh doesn't always reset to calculator
+const _savedPage=localStorage.getItem(STORE+'page');
+if(_savedPage&&_savedPage!=='calculator')showPage(_savedPage);
 
 // Show name prompt after first meaningful interaction (or 20s if idle)
 // Skip entirely for signed-in users — their name will be restored from the cloud
@@ -1230,7 +1235,7 @@ async function signOut(){
   clearTimeout(_syncTimer);
   // Sync up first (1.5s max), then clear everything immediately before any more async work
   try{await Promise.race([syncUp(),new Promise(r=>setTimeout(r,1500))]);}catch(e){}
-  [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed',STORE+'form',STORE+'name',STORE+'user_hint'].forEach(k=>localStorage.removeItem(k));
+  [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed',STORE+'form',STORE+'name',STORE+'user_hint',STORE+'page'].forEach(k=>localStorage.removeItem(k));
   checkins=[];planData=null;celebratedMilestones=[];userName='';
   currentUser=null;_otpEmail='';
   ph.reset();
@@ -1241,8 +1246,9 @@ async function signOut(){
   resetFormToDefaults();
   showToast('Signed out. Your data is saved to your account.');
   ph.capture('signed_out');
-  // Revoke server session in background with timeout so it can never hang
-  try{await Promise.race([sb.auth.signOut({scope:'local'}),new Promise(r=>setTimeout(r,1500))]);}
+  // Revoke server session — must use 'global' so the refresh token is invalidated
+  // on the server, otherwise Supabase re-establishes the session and fires INITIAL_SESSION
+  try{await Promise.race([sb.auth.signOut({scope:'global'}),new Promise(r=>setTimeout(r,1500))]);}
   catch(e){console.warn('[Trimly] sign-out error:',e);}
 }
 function flashSyncIndicator(){
