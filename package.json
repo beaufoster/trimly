@@ -8,13 +8,18 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "vite": "^6.4.2"
+    "@playwright/test": "^1.59.1",
+    "vite": "^6.4.2",
+    "vitest": "^4.1.5"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",

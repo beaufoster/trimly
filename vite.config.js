@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  test: {
+    environment: 'node',
+    include: ['tests/unit/**/*.test.js'],
+  },
   root: '.',
   base: process.env.NODE_ENV === 'production' ? '/trimly/' : '/',
   build: {
