@@ -1250,6 +1250,9 @@ async function signOut(){
   // on the server, otherwise Supabase re-establishes the session and fires INITIAL_SESSION
   try{await Promise.race([sb.auth.signOut({scope:'global'}),new Promise(r=>setTimeout(r,1500))]);}
   catch(e){console.warn('[Trimly] sign-out error:',e);}
+  // Supabase writes its own auth token to localStorage (sb-*-auth-token). Clear it
+  // manually so a page reload can't find a residual JWT and auto-sign back in.
+  Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k));
 }
 function flashSyncIndicator(){
   document.querySelectorAll('.account-btn.signed-in').forEach(b=>{
