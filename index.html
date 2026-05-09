@@ -178,11 +178,11 @@
       <div class="field-row">
         <div class="field">
           <label>Current Weight</label>
-          <div class="inp-wrap"><input type="number" id="cw" value="210" min="80" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
+          <div class="inp-wrap"><input type="number" id="cw" value="175" min="80" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
         </div>
         <div class="field" id="gw-field">
           <label>Goal Weight</label>
-          <div class="inp-wrap"><input type="number" id="gw" value="175" min="50" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
+          <div class="inp-wrap"><input type="number" id="gw" value="155" min="50" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
         </div>
       </div>
       <div id="wt-warn" class="banner warn" style="display:none;margin-bottom:4px;">
@@ -207,13 +207,13 @@
         </div>
         <div class="field">
           <label>Height (in)</label>
-          <div class="inp-wrap"><input type="number" id="ht-in" value="10" min="0" max="11" inputmode="numeric" class="has-sfx"><span class="sfx">in</span></div>
+          <div class="inp-wrap"><input type="number" id="ht-in" value="8" min="0" max="11" inputmode="numeric" class="has-sfx"><span class="sfx">in</span></div>
         </div>
       </div>
       <div class="field-row" id="ht-cm-row" style="display:none;">
         <div class="field">
           <label>Height</label>
-          <div class="inp-wrap"><input type="number" id="ht-cm" value="178" min="91" max="243" inputmode="numeric" class="has-sfx"><span class="sfx">cm</span></div>
+          <div class="inp-wrap"><input type="number" id="ht-cm" value="173" min="91" max="243" inputmode="numeric" class="has-sfx"><span class="sfx">cm</span></div>
         </div>
       </div>
     </div>
@@ -477,5 +477,10 @@
 </div>
 
 <script type="module" src="src/js/app.js"></script>
+<script>
+  if('serviceWorker' in navigator && location.hostname !== 'localhost') {
+    navigator.serviceWorker.register('/trimly/sw.js', {scope: '/trimly/'});
+  }
+</script>
 </body>
 </html>

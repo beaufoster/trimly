@@ -93,23 +93,25 @@ function updateHeroGreeting(){
 
 // ══ DEMO MODE ═══════════════════════════════════════
 function loadDemo(){
-  if(checkins.length>0&&!confirm('This will replace your check-ins with demo data. Continue?'))return;
-  cancelEditCheckin();
-  $('cw').value=fmtD(fromLbs(218));$('gw').value=fmtD(fromLbs(180));$('age').value=35;$('ht-ft').value=5;$('ht-in').value=10;$('ht-cm').value=178;$('sex').value='male';
-  $('calSl').value=1800;$('walkSl').value=30;$('liftSl').value=2;$('cardioSl').value=1;$('actSl').value=2;
-  // Add 3 demo check-ins
-  const today=new Date();
-  const demo=[
-    {id:1001,date:new Date(today-14*24*3600*1000).toISOString().split('T')[0],weight:218,note:'Starting weight'},
-    {id:1002,date:new Date(today-7*24*3600*1000).toISOString().split('T')[0],weight:215.5,note:'Good week, walked daily'},
-    {id:1003,date:today.toISOString().split('T')[0],weight:213.8,note:'Feeling great'},
-  ];
-  checkins=[...demo];
-  localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
-  celebratedMilestones=[];
-  localStorage.setItem(STORE+'celebrated',JSON.stringify(celebratedMilestones));
-  if(calcMode==='date')setMode('weight');else calculate();
-  ph.capture('demo_loaded');
+  const doLoad=()=>{
+    cancelEditCheckin();
+    $('cw').value=fmtD(fromLbs(175));$('gw').value=fmtD(fromLbs(155));$('age').value=35;$('ht-ft').value=5;$('ht-in').value=8;$('ht-cm').value=173;$('sex').value='male';
+    $('calSl').value=1800;$('walkSl').value=30;$('liftSl').value=2;$('cardioSl').value=1;$('actSl').value=2;
+    const today=new Date();
+    const demo=[
+      {id:1001,date:new Date(today-14*24*3600*1000).toISOString().split('T')[0],weight:175,note:'Starting weight'},
+      {id:1002,date:new Date(today-7*24*3600*1000).toISOString().split('T')[0],weight:172.4,note:'Good week, walked daily'},
+      {id:1003,date:today.toISOString().split('T')[0],weight:170.1,note:'Feeling great'},
+    ];
+    checkins=[...demo];
+    localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+    celebratedMilestones=[];
+    localStorage.setItem(STORE+'celebrated',JSON.stringify(celebratedMilestones));
+    if(calcMode==='date')setMode('weight');else calculate();
+    ph.capture('demo_loaded');
+  };
+  if(checkins.length>0){showConfirm('This will replace your check-ins with demo data. Continue?',doLoad);return;}
+  doLoad();
 }
 
 // ══ SHARE CARD ══════════════════════════════════════
@@ -439,7 +441,7 @@ function calculate(){
     $('r-date').textContent=fmtDate(targetDate);$('r-rate').textContent=fmtWt(avgRate,2)+'/wk avg';$('r-loss').textContent=fmtWt(totalLost);
     renderMilestones(cw,projWt,avgRate,sim);renderProjChart(sim,cw,projWt);
     planData={cw,gw:projWt,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'date',
-      age:parseInt($('age').value)||35,htFt:parseInt($('ht-ft').value)||5,htIn:parseInt($('ht-in').value)||10,htCm:parseInt($('ht-cm').value)||178,
+      age:parseInt($('age').value)||35,htFt:unitPref==='kg'?Math.floor((parseInt($('ht-cm').value)||173)/2.54/12):parseInt($('ht-ft').value)||5,htIn:unitPref==='kg'?Math.round(((parseInt($('ht-cm').value)||173)/2.54)%12):parseInt($('ht-in').value)||8,htCm:unitPref==='lbs'?Math.round((parseInt($('ht-ft').value)||5)*30.48+(parseInt($('ht-in').value)||8)*2.54):parseInt($('ht-cm').value)||173,
       sex:$('sex').value||'male',act:parseInt($('actSl').value)||2,walk:parseInt($('walkSl').value)||30,lift:parseInt($('liftSl').value)||2,cardio:parseInt($('cardioSl').value)||1,pace,name:userName||undefined};
     if(!_paceOnly){
       localStorage.setItem(STORE+'plan',JSON.stringify(planData));
@@ -469,7 +471,7 @@ function calculate(){
   $('r-date').textContent=fmtDate(goalDate);$('r-rate').textContent=fmtWt(avgRate,2)+'/wk avg';
   renderMilestones(cw,gw,avgRate,sim);renderProjChart(sim,cw,gw);
   planData={cw,gw,sim,cal:safeCal,exPerDay,goalDate:gds,savedAt:planData?.savedAt||new Date().toISOString(),mode:'weight',
-    age:parseInt($('age').value)||35,htFt:parseInt($('ht-ft').value)||5,htIn:parseInt($('ht-in').value)||10,htCm:parseInt($('ht-cm').value)||178,
+    age:parseInt($('age').value)||35,htFt:unitPref==='kg'?Math.floor((parseInt($('ht-cm').value)||173)/2.54/12):parseInt($('ht-ft').value)||5,htIn:unitPref==='kg'?Math.round(((parseInt($('ht-cm').value)||173)/2.54)%12):parseInt($('ht-in').value)||8,htCm:unitPref==='lbs'?Math.round((parseInt($('ht-ft').value)||5)*30.48+(parseInt($('ht-in').value)||8)*2.54):parseInt($('ht-cm').value)||173,
     sex:$('sex').value||'male',act:parseInt($('actSl').value)||2,walk:parseInt($('walkSl').value)||30,lift:parseInt($('liftSl').value)||2,cardio:parseInt($('cardioSl').value)||1,pace,name:userName||undefined};
   if(!_paceOnly){
     localStorage.setItem(STORE+'plan',JSON.stringify(planData));
@@ -755,7 +757,7 @@ async function addCheckin(){
   checkins.push({id:entryId,date,weight,note});
   localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
   if(isEdit&&oldDate&&oldDate!==date)await syncDeleteCheckin(oldDate);
-  syncUp().catch(()=>{});
+  syncUp().catch(()=>{if(currentUser&&!navigator.onLine)showToast('Saved locally — will sync when back online.');});
   $('ci-weight').value='';$('ci-note').value='';
   if(isEdit){
     _editId=null;
@@ -845,7 +847,7 @@ function closeModal(){$('modal-overlay').classList.remove('open');}
 function submitModal(){
   const email=$('modal-email').value.trim();
   const name=$('modal-name').value.trim();
-  if(!email||!email.includes('@')){alert('Please enter a valid email.');return;}
+  if(!email||!email.includes('@')){showToast('Please enter a valid email address.');return;}
   // Save name if entered
   if(name&&!userName){userName=name;localStorage.setItem(STORE+'name',name);updateHeroGreeting();}
   ph.capture('email_captured',{has_name:!!name,plan_mode:calcMode,streak:calcStreak()});
@@ -860,7 +862,7 @@ function skipModal(){
 function downloadPDF(){
   closeModal();
   const plan=planData;
-  if(!plan){alert('Set up your plan in the Calculator first.');return;}
+  if(!plan){showToast('Set up your plan in the Calculator first.');return;}
   const name=escapeHtml($('modal-name').value.trim()||'Your');
   const goalDate=new Date(plan.goalDate);
   const totalLoss=+(plan.cw-plan.gw).toFixed(1);
@@ -879,9 +881,7 @@ function downloadPDF(){
     const d=addWeeks(new Date(),wk);
     return`<tr><td>${labels[i]}</td><td>${fmtD(fromLbs(targetWt))} ${dispUnit}</td><td>Week ${wk}</td><td>${fmtDate(d)}</td></tr>`;
   }).join('');
-  const win=window.open('','_blank');
-  if(!win){showToast('Popup blocked — please allow popups for this site.');return;}
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Trimly — ${name}'s Plan</title>
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Trimly — ${name}'s Plan</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <style>body{font-family:'DM Sans',sans-serif;color:#161613;padding:36px;max-width:680px;margin:0 auto;}h1{font-family:'Fraunces',serif;font-size:2rem;color:#1a6b42;margin-bottom:4px;}h2{font-family:'Fraunces',serif;font-size:1.2rem;color:#161613;margin:24px 0 10px;border-bottom:2px solid #e2e8e4;padding-bottom:5px;}.sub{color:#6b7570;font-size:0.88rem;margin-bottom:24px;}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}.stat{background:#eaf7f0;border-radius:10px;padding:12px 14px;}.stat .num{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:#1a6b42;}.stat .lbl{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6b7570;margin-top:2px;}table{width:100%;border-collapse:collapse;font-size:0.85rem;}th{text-align:left;padding:8px 12px;background:#1a6b42;color:#fff;font-size:0.7rem;text-transform:uppercase;}td{padding:8px 12px;border-bottom:1px solid #e2e8e4;}tr:last-child td{border-bottom:none;}ul{line-height:2.2;font-size:0.88rem;padding-left:20px;}.footer{margin-top:36px;padding-top:14px;border-top:2px solid #e2e8e4;font-size:0.72rem;color:#9ca3af;text-align:center;}@media print{body{padding:16px;}}</style></head><body>
   <h1>Trimly — Personal Plan</h1>
@@ -905,8 +905,17 @@ function downloadPDF(){
     <li>A plateau is normal. It usually breaks within 2–3 weeks. Stay consistent.</li>
   </ul>
   <div class="footer">Trimly · Not a substitute for medical advice.</div>
-  <script>window.onload=function(){window.print();}<\/script></body></html>`);
-  win.document.close();
+  <script>window.onload=function(){window.print();}<\/script></body></html>`;
+  const win=window.open('','_blank');
+  if(win){win.document.write(html);win.document.close();}
+  else{
+    const blob=new Blob([html],{type:'text/html'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='trimly-plan.html';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    showToast('Plan downloaded! Open the file in a browser to print as PDF.');
+  }
 }
 
 // ══ EVENTS ═════════════════════════════════════════════
@@ -984,10 +993,10 @@ if(savedForm){
 }else if(unitPref==='kg'){
   // Convert HTML default values (in lbs) to kg when there's no saved form
   const cwEl=$('cw'),gwEl=$('gw');
-  if(cwEl)cwEl.value=fmtD(fromLbs(parseFloat(cwEl.value)||210));
-  if(gwEl)gwEl.value=fmtD(fromLbs(parseFloat(gwEl.value)||175));
+  if(cwEl)cwEl.value=fmtD(fromLbs(parseFloat(cwEl.value)||175));
+  if(gwEl)gwEl.value=fmtD(fromLbs(parseFloat(gwEl.value)||155));
   const ftEl=$('ht-ft'),inEl=$('ht-in'),cmEl=$('ht-cm');
-  if(ftEl&&inEl&&cmEl)cmEl.value=Math.round((parseInt(ftEl.value)||5)*30.48+(parseInt(inEl.value)||10)*2.54);
+  if(ftEl&&inEl&&cmEl)cmEl.value=Math.round((parseInt(ftEl.value)||5)*30.48+(parseInt(inEl.value)||8)*2.54);
 }
 
 updateUnitLabels();
@@ -1061,20 +1070,23 @@ function importData(e){
       const existingDates=new Set(checkins.map(c=>c.date));
       const newOnes=data.checkins.filter(c=>!existingDates.has(c.date));
       const skipped=incoming-newOnes.length;
-      if(!confirm(`Import ${incoming} check-in${incoming===1?'':'s'}?${skipped>0?` (${skipped} duplicate date${skipped===1?'':'s'} will be skipped)`:''}  Your existing data won't be overwritten.`)){e.target.value='';return;}
-      checkins=[...checkins,...newOnes].sort((a,b)=>new Date(a.date)-new Date(b.date));
-      localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
-      if(!planData&&data.plan){planData=data.plan;localStorage.setItem(STORE+'plan',JSON.stringify(planData));restoreFormFromPlanData(planData);}
-      if(!userName&&data.name){userName=data.name;localStorage.setItem(STORE+'name',userName);updateHeroGreeting();}
-      if(data.celebrated){
-        celebratedMilestones=[...new Set([...celebratedMilestones,...data.celebrated])];
-        localStorage.setItem(STORE+'celebrated',JSON.stringify(celebratedMilestones));
-      }
-      ph.capture('data_imported',{imported:newOnes.length,skipped});
-      renderCheckinPage();calculate();
-      alert(`Done! Added ${newOnes.length} check-in${newOnes.length===1?'':'s'}.${skipped>0?' '+skipped+' duplicate date'+(skipped===1?'':'s')+' skipped.':''}`);
-    }catch(err){alert('Could not read the file. Make sure it\'s a Trimly backup JSON.');}
-    e.target.value='';
+      const doImport=()=>{
+        checkins=[...checkins,...newOnes].sort((a,b)=>new Date(a.date)-new Date(b.date));
+        localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+        if(!planData&&data.plan){planData=data.plan;localStorage.setItem(STORE+'plan',JSON.stringify(planData));restoreFormFromPlanData(planData);}
+        if(!userName&&data.name){userName=data.name;localStorage.setItem(STORE+'name',userName);updateHeroGreeting();}
+        if(data.celebrated){
+          celebratedMilestones=[...new Set([...celebratedMilestones,...data.celebrated])];
+          localStorage.setItem(STORE+'celebrated',JSON.stringify(celebratedMilestones));
+        }
+        ph.capture('data_imported',{imported:newOnes.length,skipped});
+        renderCheckinPage();calculate();
+        showToast(`Done! Added ${newOnes.length} check-in${newOnes.length===1?'':'s'}.${skipped>0?' '+skipped+' duplicate date'+(skipped===1?'':'s')+' skipped.':''}`);
+        e.target.value='';
+      };
+      showConfirm(`Import ${incoming} check-in${incoming===1?'':'s'}?${skipped>0?` (${skipped} duplicate date${skipped===1?'':'s'} skipped)`:''}`,doImport,()=>{e.target.value='';});
+    }catch(err){showToast('Could not read the file. Make sure it\'s a Trimly backup JSON.');e.target.value='';}
+
   };
   reader.readAsText(file);
 }
@@ -1086,6 +1098,15 @@ function showToast(msg,duration=3500){
   document.body.appendChild(t);
   setTimeout(()=>t.classList.add('show'),10);
   setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),350);},duration);
+}
+function showConfirm(msg,onOk,onCancel){
+  const el=document.createElement('div');
+  el.className='confirm-overlay';
+  el.innerHTML=`<div class="confirm-dialog"><p class="confirm-msg">${msg}</p><div class="confirm-btns"><button class="confirm-cancel">Cancel</button><button class="confirm-ok">Continue</button></div></div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('open'));
+  el.querySelector('.confirm-cancel').onclick=()=>{el.remove();if(onCancel)onCancel();};
+  el.querySelector('.confirm-ok').onclick=()=>{el.remove();if(onOk)onOk();};
 }
 function updateSyncUI(){
   const nudge=$('sync-nudge');
@@ -1212,10 +1233,10 @@ function restoreFormFromPlanData(plan){
 }
 function resetFormToDefaults(){
   const isKg=unitPref==='kg';
-  $('cw').value=isKg?fmtD(180/KG_TO_LBS):180;
+  $('cw').value=isKg?fmtD(175/KG_TO_LBS):175;
   $('gw').value=isKg?fmtD(155/KG_TO_LBS):155;
   $('age').value=35;
-  $('ht-ft').value=5;$('ht-in').value=10;$('ht-cm').value=178;
+  $('ht-ft').value=5;$('ht-in').value=8;$('ht-cm').value=173;
   $('sex').value='male';
   $('calSl').value=1800;$('walkSl').value=30;$('liftSl').value=2;$('cardioSl').value=1;$('actSl').value=2;
   pace='steady';
@@ -1328,6 +1349,7 @@ if(sb){
       // On a new sign-in, wipe local state first so a different user's local
       // data can't contaminate this user's account via syncUp
       if(event==='SIGNED_IN'){
+        localStorage.removeItem(STORE+'signed_out');
         const preSigninPlan=planData;
         const preSigninCheckins=[...checkins];
         checkins=[];planData=null;celebratedMilestones=[];userName='';
@@ -1336,9 +1358,18 @@ if(sb){
         localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
         closeSyncSheet();
         await syncDown();
-        // New user with no remote data: restore the plan they set up before signing in
+        // Merge back offline entries not yet on Supabase.
+        // Same user or anonymous → merge by date so offline entries aren't lost.
+        // Different user switching accounts → only restore if cloud was completely empty.
+        const _isSameOrAnon=!_userHint||_userHint.id===currentUser.id;
+        if(_isSameOrAnon){
+          const _syncedDates=new Set(checkins.map(c=>c.date));
+          const _mergeBack=preSigninCheckins.filter(c=>!_syncedDates.has(c.date));
+          if(_mergeBack.length){checkins=[...checkins,..._mergeBack].sort((a,b)=>new Date(a.date)-new Date(b.date));localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));}
+        }else if(!checkins.length&&preSigninCheckins.length){
+          checkins=preSigninCheckins;localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
+        }
         if(!planData&&preSigninPlan){planData=preSigninPlan;localStorage.setItem(STORE+'plan',JSON.stringify(planData));}
-        if(!checkins.length&&preSigninCheckins.length){checkins=preSigninCheckins;localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));}
       }else{
         ph.identify(currentUser.id,{email:currentUser.email});
         localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
@@ -1432,10 +1463,11 @@ async function checkSessionManually(){
       if(data?.session?.user){sessionData=data;break;}
     }
     if(sessionData?.session?.user){
+      localStorage.removeItem(STORE+'signed_out');
       closeSyncSheet();
       currentUser=sessionData.session.user;
-      checkins=[];planData=null;celebratedMilestones=[];
-      [STORE+'checkins',STORE+'plan',STORE+'celebrated'].forEach(k=>localStorage.removeItem(k));
+      checkins=[];planData=null;celebratedMilestones=[];userName='';
+      [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'name'].forEach(k=>localStorage.removeItem(k));
       _skipNextInitialSession=true;
       ph.identify(currentUser.id,{email:currentUser.email});
       localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
@@ -1451,6 +1483,7 @@ async function checkSessionManually(){
       showToast('Session not found yet — make sure you clicked the link, then try again.');
     }
   }catch(e){
+    _skipNextInitialSession=false;
     if(btn){btn.textContent='Already clicked the link →';btn.disabled=false;}
     showToast('Could not check session. Please try again.');
   }
