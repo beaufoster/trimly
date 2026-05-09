@@ -1267,8 +1267,24 @@ async function signOut(){
   // scope:'local' clears the local token. We avoid scope:'global' because it revokes
   // all server sessions including any newly created by a magic link re-sign-in, which
   // causes the new session to silently expire and wipe data on the next page refresh.
-  try{await Promise.race([sb.auth.signOut({scope:'local'}),new Promise(r=>setTimeout(r,1500))]);}
-  catch(e){console.warn('[Trimly] sign-out error:',e);}
+  try{
+    await Promise.race([sb.auth.signOut({scope:'local'}),new Promise(r=>setTimeout(r,1500))]);
+  }catch(e){
+    console.warn('[Trimly] sign-out error:',e);
+  }
+  // After signOut completes (or times out), explicitly clear all Supabase auth tokens from localStorage.
+  // This ensures the session cannot be restored on next page load or auth check.
+  // Supabase stores auth data under various keys depending on SDK version and configuration.
+  const keysToRemove=['sb-auth-token','supabase.auth.token','sb-refresh-token','supabase.auth.refresh-token'];
+  keysToRemove.forEach(k=>localStorage.removeItem(k));
+  // Also scan and remove any dynamically-keyed Supabase auth entries (project-specific)
+  const keysToDelete=[];
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key&&(key.includes('-auth-token')||key.includes('auth.token')||key.includes('.auth.')))keysToDelete.push(key);
+  }
+  keysToDelete.forEach(k=>{localStorage.removeItem(k);if(!IS_TEST)console.log('[Trimly] Cleared auth key:',k);});
+  if(!IS_TEST)console.log('[Trimly] Sign-out complete. Cleared',keysToRemove.length+keysToDelete.length,'auth-related keys.');
 }
 function flashSyncIndicator(){
   document.querySelectorAll('.account-btn.signed-in').forEach(b=>{

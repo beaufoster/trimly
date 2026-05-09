@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/beau/Desktop/Trimly diff --stat HEAD)",
+      "Bash(git -C /Users/beau/Desktop/Trimly status)",
+      "Bash(git -C /Users/beau/Desktop/Trimly add index.html src/css/styles.css src/js/app.js public/privacy.html)",
+      "Bash(git -C /Users/beau/Desktop/Trimly commit -m ' *)",
+      "Bash(git -C /Users/beau/Desktop/Trimly push origin main)",
+      "Bash(git -C /Users/beau/Desktop/Trimly add src/js/app.js)"
+    ]
+  }
+}

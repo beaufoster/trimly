@@ -1,0 +1,31 @@
+ {
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(gh auth *)",
+      "Bash(git config *)",
+      "Bash(curl -s https://api.github.com/repos/bfoster4/trimly)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(brew install *)",
+      "Bash(gh --version)",
+      "Bash(kill %1)",
+      "Bash(gh repo *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(gh ssh-key *)",
+      "Bash(gh api *)",
+      "Bash(gh run *)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' -X POST https://us.i.posthog.com/capture/ -H 'Content-Type: application/json' -d '{\"api_key\":\"phc_rc5wkdaGcT7g5Zfwr5Kbi9LqBRQaKnyr92ah74hUVZea\",\"event\":\"test_ping\",\"distinct_id\":\"cli-test\",\"properties\":{}}')",
+      "Bash(open http://localhost:3002)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' -X POST https://us.i.posthog.com/capture/ -H 'Content-Type: application/json' -d '{\"api_key\":\"phc_uANfyidyehw2qkveadqRKqyoJQheqT3Vo5r8iEKxTRvc\",\"event\":\"__TRACKED_VAR__\",\"distinct_id\":\"__TRACKED_VAR__\",\"properties\":{\"source\":\"claude-test\",\"env\":\"production\"}}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://beaufoster.github.io/trimly/)",
+      "Bash(curl -s https://beaufoster.github.io/trimly/)",
+      "Bash(curl -s \"https://beaufoster.github.io/trimly/assets/main-BILvSdhH.js\")",
+      "Bash(node -e ' *)",
+      "Bash(npm install *)"
+    ]
+  }
+}
