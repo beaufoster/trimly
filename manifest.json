@@ -2,15 +2,17 @@
   "name": "Trimly",
   "short_name": "Trimly",
   "description": "Personal weight loss calculator and progress tracker",
-  "start_url": ".",
+  "start_url": "/trimly/",
+  "scope": "/trimly/",
   "display": "standalone",
   "background_color": "#161613",
   "theme_color": "#1a6b42",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏋️</text></svg>",
+      "src": "icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

@@ -10,8 +10,8 @@
 <title>Trimly — Weight Loss Calculator</title>
 <link rel="manifest" href="/trimly/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/trimly/assets/main-DWTjYvp0.js"></script>
-  <link rel="stylesheet" crossorigin href="/trimly/assets/main-D_FLZX6e.css">
+  <script type="module" crossorigin src="/trimly/assets/main-CzWo-IHS.js"></script>
+  <link rel="stylesheet" crossorigin href="/trimly/assets/main-B-62XykC.css">
 </head>
 <body>
 
@@ -179,11 +179,11 @@
       <div class="field-row">
         <div class="field">
           <label>Current Weight</label>
-          <div class="inp-wrap"><input type="number" id="cw" value="210" min="80" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
+          <div class="inp-wrap"><input type="number" id="cw" value="175" min="80" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
         </div>
         <div class="field" id="gw-field">
           <label>Goal Weight</label>
-          <div class="inp-wrap"><input type="number" id="gw" value="175" min="50" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
+          <div class="inp-wrap"><input type="number" id="gw" value="155" min="50" max="650" inputmode="decimal" class="has-sfx"><span class="sfx unit-sfx">lbs</span></div>
         </div>
       </div>
       <div id="wt-warn" class="banner warn" style="display:none;margin-bottom:4px;">
@@ -208,13 +208,13 @@
         </div>
         <div class="field">
           <label>Height (in)</label>
-          <div class="inp-wrap"><input type="number" id="ht-in" value="10" min="0" max="11" inputmode="numeric" class="has-sfx"><span class="sfx">in</span></div>
+          <div class="inp-wrap"><input type="number" id="ht-in" value="8" min="0" max="11" inputmode="numeric" class="has-sfx"><span class="sfx">in</span></div>
         </div>
       </div>
       <div class="field-row" id="ht-cm-row" style="display:none;">
         <div class="field">
           <label>Height</label>
-          <div class="inp-wrap"><input type="number" id="ht-cm" value="178" min="91" max="243" inputmode="numeric" class="has-sfx"><span class="sfx">cm</span></div>
+          <div class="inp-wrap"><input type="number" id="ht-cm" value="173" min="91" max="243" inputmode="numeric" class="has-sfx"><span class="sfx">cm</span></div>
         </div>
       </div>
     </div>
@@ -477,5 +477,10 @@
   <button class="account-menu-action danger" onclick="signOutFromMenu()">Sign Out</button>
 </div>
 
+<script>
+  if('serviceWorker' in navigator && location.hostname !== 'localhost') {
+    navigator.serviceWorker.register('/trimly/sw.js', {scope: '/trimly/'});
+  }
+</script>
 </body>
 </html>
