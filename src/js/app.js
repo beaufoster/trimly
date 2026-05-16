@@ -30,7 +30,7 @@ const ph = {
   reset(){if(IS_TEST||IS_OWNER)return;try{posthog.reset();}catch(e){}}
 };
 // ══ STATE ══════════════════════════════════════════
-let pace='steady', calcMode='weight', _paceOnly=false, _syncInFlight=false, _syncTimer=null, _otpEmail='', _skipNextInitialSession=false;
+let pace='steady', calcMode='weight', _paceOnly=false, _syncInFlight=false, _syncTimer=null, _authMode='signup';
 const _userHint=JSON.parse(localStorage.getItem(STORE+'user_hint')||'null');
 let currentUser=_userHint||null;
 const KG_TO_LBS=_KG_TO_LBS;
@@ -939,7 +939,8 @@ $('ci-weight').addEventListener('keydown',e=>{if(e.key==='Enter')addCheckin();})
 $('ci-note').addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter')addCheckin();});
 $('modal-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('modal-email').focus();});
 $('modal-email').addEventListener('keydown',e=>{if(e.key==='Enter')submitModal();});
-$('sync-email').addEventListener('keydown',e=>{if(e.key==='Enter')signIn();});
+$('sync-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('sync-password').focus();});
+$('sync-password').addEventListener('keydown',e=>{if(e.key==='Enter')signIn();});
 
 // Escape closes any open overlay
 document.addEventListener('keydown',e=>{
@@ -953,6 +954,7 @@ document.addEventListener('keydown',e=>{
 });
 
 // ══ INIT ═══════════════════════════════════════════════
+localStorage.removeItem('trimly_cookie_consent'); // reset prior choices while banner is disabled
 const _cookieConsent=localStorage.getItem('trimly_cookie_consent');
 function _initPosthog(){
   if(IS_TEST||IS_OWNER||PH_KEY==='YOUR_POSTHOG_KEY')return;
@@ -969,7 +971,7 @@ function declineCookies(){
   localStorage.setItem('trimly_cookie_consent','declined');
   const b=$('cookie-banner');if(b)b.style.display='none';
 }
-if(_cookieConsent==='accepted') _initPosthog();
+_initPosthog(); // tracking always on; cookie banner disabled for current build
 
 // Restore form state from last session
 if(savedForm){
@@ -1028,10 +1030,10 @@ ph.capture('app_loaded',{
   returning_user:!!planData||checkins.length>0,
 });
 
-// Show cookie banner if user hasn't decided yet
-if(!_cookieConsent&&!IS_TEST&&!IS_OWNER){
-  setTimeout(()=>{const b=$('cookie-banner');if(b)b.style.display='flex';},1500);
-}
+// Cookie banner disabled for current build — tracking is always on
+// if(!_cookieConsent&&!IS_TEST&&!IS_OWNER){
+//   setTimeout(()=>{const b=$('cookie-banner');if(b)b.style.display='flex';},1500);
+// }
 
 // Production error tracking — catches silent crashes
 window.addEventListener('unhandledrejection',e=>{
@@ -1155,12 +1157,28 @@ function dismissSyncNudge(){
 function openSyncSheet(){
   if(!sb)return;
   $('sync-overlay').classList.add('show');
-  $('sync-step-email').style.display='block';
-  $('sync-step-otp').style.display='none';
   $('sync-error').style.display='none';
   $('sync-email').value='';
+  $('sync-password').value='';
+  _authMode='signup';
+  _updateAuthModeUI();
   setTimeout(()=>$('sync-email').focus(),300);
   ph.capture('sign_in_opened');
+}
+function toggleAuthMode(){
+  _authMode=_authMode==='signup'?'signin':'signup';
+  _updateAuthModeUI();
+}
+function _updateAuthModeUI(){
+  const isSignup=_authMode==='signup';
+  $('sync-auth-title').textContent=isSignup?'Save Your Progress':'Welcome Back';
+  $('sync-auth-desc').textContent=isSignup
+    ?'Create a free account to keep your data safe and access it from any device.'
+    :'Sign in to sync your data across devices.';
+  $('sync-submit-btn').textContent=isSignup?'Create Account →':'Sign In →';
+  $('sync-mode-toggle').textContent=isSignup?'Already have an account? Sign in':'No account? Sign up';
+  $('sync-password').autocomplete=isSignup?'new-password':'current-password';
+  $('sync-error').style.display='none';
 }
 function closeSyncSheet(){
   const ov=$('sync-overlay');if(ov)ov.classList.remove('show');
@@ -1168,40 +1186,29 @@ function closeSyncSheet(){
 async function signIn(){
   if(!sb)return;
   const email=$('sync-email').value.trim();
+  const password=$('sync-password').value;
   const errEl=$('sync-error');
   if(!email||!email.includes('@')){errEl.textContent='Enter a valid email address.';errEl.style.display='block';return;}
+  if(!password||password.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
   errEl.style.display='none';
   const btn=$('sync-submit-btn');
-  if(btn){btn.textContent='Sending…';btn.disabled=true;}
-  const redirectTo=window.location.href.replace(/[?#].*/,'');
+  const btnLabel=_authMode==='signup'?'Create Account →':'Sign In →';
+  if(btn){btn.textContent=_authMode==='signup'?'Creating…':'Signing in…';btn.disabled=true;}
   localStorage.removeItem(STORE+'signed_out');
-  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
-  if(btn){btn.textContent='Send Link →';btn.disabled=false;}
-  if(error){
-    console.warn('[Trimly] signInWithOtp error:',error.message,'| redirectTo:',redirectTo,'| status:',error.status);
-    if(error.message.toLowerCase().includes('invalid')){
-      errEl.innerHTML='Configuration error — open browser DevTools (F12) › Console and send the <strong>[Trimly]</strong> line to support.';
-    } else {
-      errEl.textContent=error.message;
-    }
+  let authError;
+  if(_authMode==='signup'){
+    ({error:authError}=await sb.auth.signUp({email,password}));
+  }else{
+    ({error:authError}=await sb.auth.signInWithPassword({email,password}));
+  }
+  if(btn){btn.textContent=btnLabel;btn.disabled=false;}
+  if(authError){
+    errEl.textContent=authError.message;
     errEl.style.display='block';
     return;
   }
-  _otpEmail=email;
-  const desc=$('sync-otp-desc');
-  if(desc)desc.textContent='We sent a sign-in link to '+email+'. Click it to sign in — then return to this tab.';
-  $('sync-step-email').style.display='none';
-  $('sync-step-otp').style.display='block';
-  const errEl2=$('sync-otp-error');
-  if(errEl2)errEl2.style.display='none';
-  ph.capture('magic_link_sent');
-}
-async function resendLink(){
-  if(!_otpEmail)return;
-  $('sync-step-otp').style.display='none';
-  $('sync-step-email').style.display='block';
-  $('sync-email').value=_otpEmail;
-  await signIn();
+  ph.capture(_authMode==='signup'?'signed_up':'signed_in_password');
+  // onAuthStateChange handles the rest (closeSyncSheet, syncDown, UI update)
 }
 function restoreFormFromPlanData(plan){
   if(!plan)return;
@@ -1248,11 +1255,10 @@ function resetFormToDefaults(){
 async function signOut(){
   if(!sb)return;
   clearTimeout(_syncTimer);
-  // Sync up first (1.5s max), then clear everything immediately before any more async work
   try{await Promise.race([syncUp(),new Promise(r=>setTimeout(r,1500))]);}catch(e){}
-  [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'sync_nudge_dismissed',STORE+'form',STORE+'name',STORE+'user_hint',STORE+'page'].forEach(k=>localStorage.removeItem(k));
+  [STORE+'sync_nudge_dismissed',STORE+'form',STORE+'user_hint',STORE+'page'].forEach(k=>localStorage.removeItem(k));
   checkins=[];planData=null;celebratedMilestones=[];userName='';
-  currentUser=null;_otpEmail='';
+  currentUser=null;
   ph.reset();
   ph.identify(_deviceId);
   updateSyncUI();
@@ -1261,30 +1267,12 @@ async function signOut(){
   resetFormToDefaults();
   showToast('Signed out. Your data is saved to your account.');
   ph.capture('signed_out');
-  // Block INITIAL_SESSION from auto-restoring the session across all tabs and page loads
-  // until the user explicitly signs in again. Uses localStorage so it persists after tab close.
   localStorage.setItem(STORE+'signed_out','1');
-  // scope:'local' clears the local token. We avoid scope:'global' because it revokes
-  // all server sessions including any newly created by a magic link re-sign-in, which
-  // causes the new session to silently expire and wipe data on the next page refresh.
   try{
-    await Promise.race([sb.auth.signOut({scope:'local'}),new Promise(r=>setTimeout(r,1500))]);
+    await Promise.race([sb.auth.signOut(),new Promise(r=>setTimeout(r,1500))]);
   }catch(e){
     console.warn('[Trimly] sign-out error:',e);
   }
-  // After signOut completes (or times out), explicitly clear all Supabase auth tokens from localStorage.
-  // This ensures the session cannot be restored on next page load or auth check.
-  // Supabase stores auth data under various keys depending on SDK version and configuration.
-  const keysToRemove=['sb-auth-token','supabase.auth.token','sb-refresh-token','supabase.auth.refresh-token'];
-  keysToRemove.forEach(k=>localStorage.removeItem(k));
-  // Also scan and remove any dynamically-keyed Supabase auth entries (project-specific)
-  const keysToDelete=[];
-  for(let i=0;i<localStorage.length;i++){
-    const key=localStorage.key(i);
-    if(key&&(key.includes('-auth-token')||key.includes('auth.token')||key.includes('.auth.')))keysToDelete.push(key);
-  }
-  keysToDelete.forEach(k=>{localStorage.removeItem(k);if(!IS_TEST)console.log('[Trimly] Cleared auth key:',k);});
-  if(!IS_TEST)console.log('[Trimly] Sign-out complete. Cleared',keysToRemove.length+keysToDelete.length,'auth-related keys.');
 }
 function flashSyncIndicator(){
   document.querySelectorAll('.account-btn.signed-in').forEach(b=>{
@@ -1355,28 +1343,23 @@ async function syncDown(){
 if(sb){
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==='SIGNED_OUT'){currentUser=null;localStorage.removeItem(STORE+'user_hint');updateSyncUI();return;}
-    if((event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED')&&localStorage.getItem(STORE+'signed_out'))return;
+    if((event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED'||event==='SIGNED_IN')&&localStorage.getItem(STORE+'signed_out'))return;
     if(event==='TOKEN_REFRESHED'&&!currentUser)return;
     currentUser=session?.user||null;
     if(!currentUser)localStorage.removeItem(STORE+'user_hint');
     updateSyncUI();
     if(currentUser&&(event==='SIGNED_IN'||event==='INITIAL_SESSION')){
-      if(event==='INITIAL_SESSION'&&_skipNextInitialSession){_skipNextInitialSession=false;return;}
-      // On a new sign-in, wipe local state first so a different user's local
-      // data can't contaminate this user's account via syncUp
       if(event==='SIGNED_IN'){
         localStorage.removeItem(STORE+'signed_out');
-        const preSigninPlan=planData;
-        const preSigninCheckins=[...checkins];
+        const preSigninCheckins=checkins.length?[...checkins]:JSON.parse(localStorage.getItem(STORE+'checkins')||'[]');
+        const preSigninPlan=planData||JSON.parse(localStorage.getItem(STORE+'plan')||'null');
+        const preSigninName=userName||localStorage.getItem(STORE+'name')||'';
         checkins=[];planData=null;celebratedMilestones=[];userName='';
         [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'name'].forEach(k=>localStorage.removeItem(k));
         ph.identify(currentUser.id,{email:currentUser.email});
         localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
         closeSyncSheet();
         await syncDown();
-        // Merge back offline entries not yet on Supabase.
-        // Same user or anonymous → merge by date so offline entries aren't lost.
-        // Different user switching accounts → only restore if cloud was completely empty.
         const _isSameOrAnon=!_userHint||_userHint.id===currentUser.id;
         if(_isSameOrAnon){
           const _syncedDates=new Set(checkins.map(c=>c.date));
@@ -1386,6 +1369,7 @@ if(sb){
           checkins=preSigninCheckins;localStorage.setItem(STORE+'checkins',JSON.stringify(checkins));
         }
         if(!planData&&preSigninPlan){planData=preSigninPlan;localStorage.setItem(STORE+'plan',JSON.stringify(planData));}
+        if(!userName&&preSigninName&&_isSameOrAnon){userName=preSigninName;localStorage.setItem(STORE+'name',userName);if(planData){planData.name=userName;localStorage.setItem(STORE+'plan',JSON.stringify(planData));}updateHeroGreeting();}
       }else{
         ph.identify(currentUser.id,{email:currentUser.email});
         localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
@@ -1465,46 +1449,6 @@ function updateUnitLabels(){
   if(cmRow)cmRow.style.display=unitPref==='kg'?'flex':'none';
 }
 
-// ══ iOS MAGIC LINK SESSION CHECK ══════════════════════
-async function checkSessionManually(){
-  if(!sb)return;
-  const btn=$('sync-check-session-btn');
-  if(btn){btn.textContent='Checking…';btn.disabled=true;}
-  try{
-    // Retry up to 4x with 400ms gaps — iOS PWA needs a moment after magic link click
-    let sessionData=null;
-    for(let attempt=0;attempt<4;attempt++){
-      if(attempt>0)await new Promise(r=>setTimeout(r,400));
-      const{data}=await sb.auth.getSession();
-      if(data?.session?.user){sessionData=data;break;}
-    }
-    if(sessionData?.session?.user){
-      localStorage.removeItem(STORE+'signed_out');
-      closeSyncSheet();
-      currentUser=sessionData.session.user;
-      checkins=[];planData=null;celebratedMilestones=[];userName='';
-      [STORE+'checkins',STORE+'plan',STORE+'celebrated',STORE+'name'].forEach(k=>localStorage.removeItem(k));
-      _skipNextInitialSession=true;
-      ph.identify(currentUser.id,{email:currentUser.email});
-      localStorage.setItem(STORE+'user_hint',JSON.stringify({id:currentUser.id,email:currentUser.email}));
-      await syncDown();
-      restoreFormFromPlanData(planData);
-      renderCheckinPage();calculate();
-      updateSyncUI();
-      showToast('✓ Signed in! Your data is backed up.');
-      ph.capture('signed_in',{event:'manual_session_check'});
-      syncUp().catch(()=>{});
-    }else{
-      if(btn){btn.textContent='Already clicked the link →';btn.disabled=false;}
-      showToast('Session not found yet — make sure you clicked the link, then try again.');
-    }
-  }catch(e){
-    _skipNextInitialSession=false;
-    if(btn){btn.textContent='Already clicked the link →';btn.disabled=false;}
-    showToast('Could not check session. Please try again.');
-  }
-}
-
 // ══ GLOBAL EXPORTS ═══════════════════════════════════
 // Expose functions to global scope for HTML onclick handlers
 window.showNamePrompt = showNamePrompt;
@@ -1533,7 +1477,7 @@ window.importData = importData;
 window.openSyncSheet = openSyncSheet;
 window.closeSyncSheet = closeSyncSheet;
 window.signIn = signIn;
-window.resendLink = resendLink;
+window.toggleAuthMode = toggleAuthMode;
 window.signOut = signOut;
 window.toggleAccountMenu = toggleAccountMenu;
 window.signOutFromMenu = signOutFromMenu;
@@ -1543,7 +1487,6 @@ window.dismissSyncNudge = dismissSyncNudge;
 window.editCheckin = editCheckin;
 window.cancelEditCheckin = cancelEditCheckin;
 window.toggleUnit = toggleUnit;
-window.checkSessionManually = checkSessionManually;
 window.acceptCookies = acceptCookies;
 window.declineCookies = declineCookies;
 window.resetFormToDefaults = resetFormToDefaults;
