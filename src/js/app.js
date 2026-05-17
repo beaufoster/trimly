@@ -939,8 +939,9 @@ $('ci-weight').addEventListener('keydown',e=>{if(e.key==='Enter')addCheckin();})
 $('ci-note').addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter')addCheckin();});
 $('modal-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('modal-email').focus();});
 $('modal-email').addEventListener('keydown',e=>{if(e.key==='Enter')submitModal();});
-$('sync-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('sync-password').focus();});
+$('sync-email').addEventListener('keydown',e=>{if(e.key==='Enter'){if(_authMode==='forgot')signIn();else $('sync-password').focus();}});
 $('sync-password').addEventListener('keydown',e=>{if(e.key==='Enter')signIn();});
+$('sync-recover-password').addEventListener('keydown',e=>{if(e.key==='Enter')setNewPassword();});
 
 // Escape closes any open overlay
 document.addEventListener('keydown',e=>{
@@ -1157,7 +1158,12 @@ function dismissSyncNudge(){
 function openSyncSheet(){
   if(!sb)return;
   $('sync-overlay').classList.add('show');
+  $('sync-step-auth').style.display='block';
+  $('sync-step-recover').style.display='none';
   $('sync-error').style.display='none';
+  $('sync-email').style.display='';
+  $('sync-password').style.display='';
+  $('sync-submit-btn').style.display='';
   $('sync-email').value='';
   $('sync-password').value='';
   _authMode='signup';
@@ -1169,15 +1175,23 @@ function toggleAuthMode(){
   _authMode=_authMode==='signup'?'signin':'signup';
   _updateAuthModeUI();
 }
+function setForgotMode(){
+  _authMode='forgot';
+  _updateAuthModeUI();
+}
 function _updateAuthModeUI(){
   const isSignup=_authMode==='signup';
-  $('sync-auth-title').textContent=isSignup?'Save Your Progress':'Welcome Back';
-  $('sync-auth-desc').textContent=isSignup
-    ?'Create a free account to keep your data safe and access it from any device.'
+  const isForgot=_authMode==='forgot';
+  $('sync-auth-title').textContent=isForgot?'Reset Password':isSignup?'Save Your Progress':'Welcome Back';
+  $('sync-auth-desc').textContent=isForgot
+    ?'Enter your email and we\'ll send you a reset link.'
+    :isSignup?'Create a free account to keep your data safe and access it from any device.'
     :'Sign in to sync your data across devices.';
-  $('sync-submit-btn').textContent=isSignup?'Create Account →':'Sign In →';
-  $('sync-mode-toggle').textContent=isSignup?'Already have an account? Sign in':'No account? Sign up';
+  $('sync-submit-btn').textContent=isForgot?'Send Reset Email →':isSignup?'Create Account →':'Sign In →';
+  $('sync-mode-toggle').textContent=isForgot?'Back to sign in':isSignup?'Already have an account? Sign in':'No account? Sign up';
+  $('sync-password').style.display=isForgot?'none':'';
   $('sync-password').autocomplete=isSignup?'new-password':'current-password';
+  $('sync-forgot-link').style.display=_authMode==='signin'?'block':'none';
   $('sync-error').style.display='none';
 }
 function closeSyncSheet(){
@@ -1186,12 +1200,27 @@ function closeSyncSheet(){
 async function signIn(){
   if(!sb)return;
   const email=$('sync-email').value.trim();
-  const password=$('sync-password').value;
   const errEl=$('sync-error');
   if(!email||!email.includes('@')){errEl.textContent='Enter a valid email address.';errEl.style.display='block';return;}
-  if(!password||password.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
   errEl.style.display='none';
   const btn=$('sync-submit-btn');
+  if(_authMode==='forgot'){
+    if(btn){btn.textContent='Sending…';btn.disabled=true;}
+    const redirectTo=window.location.href.replace(/[?#].*/,'');
+    const{error:resetErr}=await sb.auth.resetPasswordForEmail(email,{emailRedirectTo:redirectTo});
+    if(btn){btn.textContent='Send Reset Email →';btn.disabled=false;}
+    if(resetErr){errEl.textContent=resetErr.message;errEl.style.display='block';return;}
+    $('sync-auth-title').textContent='Check Your Email';
+    $('sync-auth-desc').textContent='We sent a password reset link to '+email+'. Click it to set your password.';
+    $('sync-email').style.display='none';
+    $('sync-submit-btn').style.display='none';
+    $('sync-forgot-link').style.display='none';
+    $('sync-mode-toggle').textContent='Back to sign in';
+    ph.capture('password_reset_requested');
+    return;
+  }
+  const password=$('sync-password').value;
+  if(!password||password.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
   const btnLabel=_authMode==='signup'?'Create Account →':'Sign In →';
   if(btn){btn.textContent=_authMode==='signup'?'Creating…':'Signing in…';btn.disabled=true;}
   localStorage.removeItem(STORE+'signed_out');
@@ -1202,13 +1231,26 @@ async function signIn(){
     ({error:authError}=await sb.auth.signInWithPassword({email,password}));
   }
   if(btn){btn.textContent=btnLabel;btn.disabled=false;}
-  if(authError){
-    errEl.textContent=authError.message;
-    errEl.style.display='block';
-    return;
-  }
+  if(authError){errEl.textContent=authError.message;errEl.style.display='block';return;}
   ph.capture(_authMode==='signup'?'signed_up':'signed_in_password');
   // onAuthStateChange handles the rest (closeSyncSheet, syncDown, UI update)
+}
+async function setNewPassword(){
+  if(!sb)return;
+  const password=$('sync-recover-password').value;
+  const errEl=$('sync-recover-error');
+  if(!password||password.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  const btn=$('sync-recover-btn');
+  if(btn){btn.textContent='Saving…';btn.disabled=true;}
+  const{error}=await sb.auth.updateUser({password});
+  if(error){errEl.textContent=error.message;errEl.style.display='block';if(btn){btn.textContent='Save Password →';btn.disabled=false;}return;}
+  $('sync-step-recover').style.display='none';
+  $('sync-step-auth').style.display='block';
+  closeSyncSheet();
+  showToast('Password set! You\'re now signed in.');
+  ph.capture('password_set');
+  if(currentUser){await syncDown();restoreFormFromPlanData(planData);renderCheckinPage();calculate();updateSyncUI();syncUp().catch(()=>{});}
 }
 function restoreFormFromPlanData(plan){
   if(!plan)return;
@@ -1342,6 +1384,16 @@ async function syncDown(){
 }
 if(sb){
   sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='PASSWORD_RECOVERY'){
+      currentUser=session?.user||null;
+      $('sync-overlay').classList.add('show');
+      $('sync-step-auth').style.display='none';
+      $('sync-step-recover').style.display='block';
+      $('sync-recover-password').value='';
+      setTimeout(()=>$('sync-recover-password').focus(),300);
+      return;
+    }
+    if(event==='USER_UPDATED')return;
     if(event==='SIGNED_OUT'){currentUser=null;localStorage.removeItem(STORE+'user_hint');updateSyncUI();return;}
     if((event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED'||event==='SIGNED_IN')&&localStorage.getItem(STORE+'signed_out'))return;
     if(event==='TOKEN_REFRESHED'&&!currentUser)return;
@@ -1477,7 +1529,9 @@ window.importData = importData;
 window.openSyncSheet = openSyncSheet;
 window.closeSyncSheet = closeSyncSheet;
 window.signIn = signIn;
+window.setNewPassword = setNewPassword;
 window.toggleAuthMode = toggleAuthMode;
+window.setForgotMode = setForgotMode;
 window.signOut = signOut;
 window.toggleAccountMenu = toggleAccountMenu;
 window.signOutFromMenu = signOutFromMenu;
