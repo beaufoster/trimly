@@ -1,4 +1,4 @@
- {
+{
   "permissions": {
     "allow": [
       "Bash(npm run *)",
@@ -23,9 +23,12 @@
       "Bash(curl -s -o /dev/null -w '%{http_code}' -X POST https://us.i.posthog.com/capture/ -H 'Content-Type: application/json' -d '{\"api_key\":\"phc_uANfyidyehw2qkveadqRKqyoJQheqT3Vo5r8iEKxTRvc\",\"event\":\"__TRACKED_VAR__\",\"distinct_id\":\"__TRACKED_VAR__\",\"properties\":{\"source\":\"claude-test\",\"env\":\"production\"}}')",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://beaufoster.github.io/trimly/)",
       "Bash(curl -s https://beaufoster.github.io/trimly/)",
-      "Bash(curl -s \"https://beaufoster.github.io/trimly/assets/main-BILvSdhH.js\")",
       "Bash(node -e ' *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(npx vitest *)"
+    ],
+    "additionalDirectories": [
+      "/Users/beau/Documents/app_creations"
     ]
   }
 }
