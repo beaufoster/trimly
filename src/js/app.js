@@ -1172,7 +1172,7 @@ function openSyncSheet(){
   ph.capture('sign_in_opened');
 }
 function toggleAuthMode(){
-  _authMode=_authMode==='signup'?'signin':'signup';
+  _authMode=_authMode==='signup'?'signin':(_authMode==='forgot'?'signin':'signup');
   _updateAuthModeUI();
 }
 function setForgotMode(){
@@ -1189,6 +1189,8 @@ function _updateAuthModeUI(){
     :'Sign in to sync your data across devices.';
   $('sync-submit-btn').textContent=isForgot?'Send Reset Email →':isSignup?'Create Account →':'Sign In →';
   $('sync-mode-toggle').textContent=isForgot?'Back to sign in':isSignup?'Already have an account? Sign in':'No account? Sign up';
+  $('sync-email').style.display='';
+  $('sync-submit-btn').style.display='';
   $('sync-password').style.display=isForgot?'none':'';
   $('sync-password').autocomplete=isSignup?'new-password':'current-password';
   $('sync-forgot-link').style.display=_authMode==='signin'?'block':'none';
@@ -1206,8 +1208,7 @@ async function signIn(){
   const btn=$('sync-submit-btn');
   if(_authMode==='forgot'){
     if(btn){btn.textContent='Sending…';btn.disabled=true;}
-    const redirectTo=window.location.href.replace(/[?#].*/,'');
-    const{error:resetErr}=await sb.auth.resetPasswordForEmail(email,{emailRedirectTo:redirectTo});
+    const{error:resetErr}=await sb.auth.resetPasswordForEmail(email,{emailRedirectTo:'https://beaufoster.github.io/trimly/'});
     if(btn){btn.textContent='Send Reset Email →';btn.disabled=false;}
     if(resetErr){errEl.textContent=resetErr.message;errEl.style.display='block';return;}
     $('sync-auth-title').textContent='Check Your Email';
