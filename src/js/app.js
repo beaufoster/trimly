@@ -1208,7 +1208,8 @@ async function signIn(){
   const btn=$('sync-submit-btn');
   if(_authMode==='forgot'){
     if(btn){btn.textContent='Sending…';btn.disabled=true;}
-    const{error:resetErr}=await sb.auth.resetPasswordForEmail(email,{emailRedirectTo:'https://beaufoster.github.io/trimly/'});
+    const redirect = window.location.origin + window.location.pathname + window.location.search;
+    const{error:resetErr}=await sb.auth.resetPasswordForEmail(email, { redirectTo: redirect });
     if(btn){btn.textContent='Send Reset Email →';btn.disabled=false;}
     if(resetErr){errEl.textContent=resetErr.message;errEl.style.display='block';return;}
     $('sync-auth-title').textContent='Check Your Email';
