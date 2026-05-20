@@ -1470,7 +1470,6 @@ if(sb){
     if((event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED'||event==='SIGNED_IN')&&localStorage.getItem(STORE+'signed_out'))return;
     if(event==='TOKEN_REFRESHED'&&!currentUser)return;
     currentUser=session?.user||null;
-    if(!currentUser)localStorage.removeItem(STORE+'user_hint');
     updateSyncUI();
     if(currentUser&&(event==='SIGNED_IN'||event==='INITIAL_SESSION')){
       if(event==='SIGNED_IN'){

@@ -25,3 +25,4 @@ yarn-error.log*
 
 # Trimly specific
 # If you add any build artifacts or temp files
+.vercel

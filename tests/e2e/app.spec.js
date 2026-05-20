@@ -1,11 +1,15 @@
 import { test, expect } from '@playwright/test';
 
-// Desktop Chrome viewport — bottom tab-bar is hidden, desktop nav is active.
-// Use these helpers to navigate so tests work regardless of viewport.
-function navTo(page, dest) {
-  // Desktop nav tabs have no IDs; match by text.
-  const label = dest === 'checkin' ? 'Weekly Check-In' : 'Calculator';
-  return page.locator(`button.desktop-nav-tab:has-text("${label}")`).click();
+// Navigate using whichever nav is visible — desktop sidebar or mobile tab-bar.
+async function navTo(page, dest) {
+  const mobileTab = page.locator(`#tab-${dest}`);
+  const desktopLabel = dest === 'checkin' ? 'Weekly Check-In' : 'Calculator';
+  const desktopTab = page.locator(`button.desktop-nav-tab:has-text("${desktopLabel}")`);
+  const isMobileVisible = await mobileTab.isVisible();
+  if (isMobileVisible) {
+    return mobileTab.click();
+  }
+  return desktopTab.click();
 }
 
 test.beforeEach(async ({ page }) => {
