@@ -166,7 +166,7 @@ function renderShareCard(){
   if(name){ctx.font='bold 15px DM Sans,sans-serif';ctx.fillStyle='rgba(255,255,255,0.4)';ctx.textAlign='right';ctx.fillText(name,W-32,H-32);}
   // Tagline
   ctx.font='13px DM Sans,sans-serif';ctx.fillStyle='rgba(255,255,255,0.25)';
-  ctx.textAlign='center';ctx.fillText('beaufoster.github.io/trimly',W/2,H-28);
+  ctx.textAlign='center';ctx.fillText('trimly.vercel.app',W/2,H-28);
   // Scale canvas display
   canvas.style.width='100%';canvas.style.height='auto';
 }

@@ -481,7 +481,7 @@
 <script type="module" src="src/js/app.js"></script>
 <script>
   if('serviceWorker' in navigator && location.hostname !== 'localhost') {
-    navigator.serviceWorker.register('/trimly/sw.js', {scope: '/trimly/'});
+    navigator.serviceWorker.register('/sw.js', {scope: '/'});
   }
 </script>
 </body>

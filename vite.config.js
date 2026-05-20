@@ -6,7 +6,7 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.js'],
   },
   root: '.',
-  base: process.env.NODE_ENV === 'production' ? '/trimly/' : '/',
+  base: '/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
