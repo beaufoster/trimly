@@ -1160,16 +1160,79 @@ function openSyncSheet(){
   $('sync-overlay').classList.add('show');
   $('sync-step-auth').style.display='block';
   $('sync-step-recover').style.display='none';
+  $('sync-step-account').style.display='none';
   $('sync-error').style.display='none';
   $('sync-email').style.display='';
   $('sync-password').style.display='';
   $('sync-submit-btn').style.display='';
   $('sync-email').value='';
   $('sync-password').value='';
-  _authMode='signup';
+  _authMode=localStorage.getItem(STORE+'user_hint')?'signin':'signup';
   _updateAuthModeUI();
   setTimeout(()=>$('sync-email').focus(),300);
   ph.capture('sign_in_opened');
+}
+function openAccountSettings(){
+  closeAccountMenu();
+  if(!sb||!currentUser)return;
+  $('sync-overlay').classList.add('show');
+  $('sync-step-auth').style.display='none';
+  $('sync-step-recover').style.display='none';
+  $('sync-step-account').style.display='block';
+  $('acct-signed-in-as').textContent='Signed in as '+currentUser.email;
+  $('acct-name').value=userName||'';
+  $('acct-email').value='';
+  $('acct-password').value='';
+  ['acct-name-status','acct-email-status','acct-password-status'].forEach(id=>{const el=$(id);el.textContent='';el.className='acct-status';});
+  $('acct-unit-lbs').classList.toggle('active',unitPref==='lbs');
+  $('acct-unit-kg').classList.toggle('active',unitPref==='kg');
+}
+async function saveDisplayName(){
+  const val=$('acct-name').value.trim();
+  const status=$('acct-name-status');
+  const btn=document.querySelector('#sync-step-account .acct-section:first-of-type .acct-save');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  userName=val;
+  localStorage.setItem(STORE+'name',val);
+  if(planData){planData.name=val;localStorage.setItem(STORE+'plan',JSON.stringify(planData));}
+  updateHeroGreeting();
+  if(sb&&currentUser){
+    const{error}=await sb.from('profiles').upsert({user_id:currentUser.id,display_name:val||null,unit_pref:unitPref,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+    if(error){status.textContent='Error saving — try again.';status.className='acct-status err';}
+    else{status.textContent='Name saved ✓';status.className='acct-status ok';}
+  }else{status.textContent='Name saved ✓';status.className='acct-status ok';}
+  if(btn){btn.disabled=false;btn.textContent='Save Name';}
+}
+function setUnitFromAccount(unit){
+  if(unit===unitPref)return;
+  $('acct-unit-lbs').classList.toggle('active',unit==='lbs');
+  $('acct-unit-kg').classList.toggle('active',unit==='kg');
+  toggleUnit();
+  if(sb&&currentUser)sb.from('profiles').upsert({user_id:currentUser.id,display_name:userName||null,unit_pref:unit,updated_at:new Date().toISOString()},{onConflict:'user_id'}).catch(()=>{});
+}
+async function saveAccountEmail(){
+  const email=$('acct-email').value.trim();
+  const status=$('acct-email-status');
+  const btns=document.querySelectorAll('#sync-step-account .acct-save');
+  const btn=btns[1];
+  if(!email||!email.includes('@')){status.textContent='Enter a valid email address.';status.className='acct-status err';return;}
+  if(btn){btn.disabled=true;btn.textContent='Sending…';}
+  const{error}=await sb.auth.updateUser({email});
+  if(error){status.textContent=error.message;status.className='acct-status err';}
+  else{status.textContent='Check your new inbox to confirm the change ✓';status.className='acct-status ok';$('acct-email').value='';}
+  if(btn){btn.disabled=false;btn.textContent='Update Email';}
+}
+async function saveAccountPassword(){
+  const password=$('acct-password').value;
+  const status=$('acct-password-status');
+  const btns=document.querySelectorAll('#sync-step-account .acct-save');
+  const btn=btns[2];
+  if(!password||password.length<6){status.textContent='Password must be at least 6 characters.';status.className='acct-status err';return;}
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const{error}=await sb.auth.updateUser({password});
+  if(error){status.textContent=error.message;status.className='acct-status err';}
+  else{status.textContent='Password updated ✓';status.className='acct-status ok';$('acct-password').value='';}
+  if(btn){btn.disabled=false;btn.textContent='Update Password';}
 }
 function toggleAuthMode(){
   _authMode=_authMode==='signup'?'signin':(_authMode==='forgot'?'signin':'signup');
@@ -1340,6 +1403,7 @@ async function syncUp(){
     if(planData){
       ops.push(sb.from('user_plans').upsert({user_id:uid,data:planData,updated_at:new Date().toISOString()},{onConflict:'user_id'}));
     }
+    ops.push(sb.from('profiles').upsert({user_id:uid,display_name:userName||null,unit_pref:unitPref,updated_at:new Date().toISOString()},{onConflict:'user_id'}));
     await Promise.all(ops);
     flashSyncIndicator();
   }catch(e){console.warn('[Trimly] sync push failed:',e);}
@@ -1355,11 +1419,16 @@ async function syncDown(){
   if(!sb||!currentUser||IS_TEST)return false;
   try{
     const uid=currentUser.id;
-    const[{data:remote,error:e1},{data:planRow,error:e2}]=await Promise.all([
+    const[{data:remote,error:e1},{data:planRow,error:e2},{data:profile,error:e3}]=await Promise.all([
       sb.from('checkins').select('app_id,date,weight,note').eq('user_id',uid),
-      sb.from('user_plans').select('data').eq('user_id',uid).maybeSingle()
+      sb.from('user_plans').select('data').eq('user_id',uid).maybeSingle(),
+      sb.from('profiles').select('display_name,unit_pref').eq('user_id',uid).maybeSingle()
     ]);
     if(e1)throw e1;if(e2)throw e2;
+    if(profile){
+      if(profile.display_name&&!userName){userName=profile.display_name;localStorage.setItem(STORE+'name',userName);updateHeroGreeting();}
+      if(profile.unit_pref&&profile.unit_pref!==unitPref){unitPref=profile.unit_pref;localStorage.setItem(STORE+'unit',unitPref);updateUnitLabels();}
+    }
     let changed=false;
     if(remote?.length){
       const localDates=new Set(checkins.map(c=>c.date));
@@ -1531,6 +1600,11 @@ window.exportData = exportData;
 window.importData = importData;
 window.openSyncSheet = openSyncSheet;
 window.closeSyncSheet = closeSyncSheet;
+window.openAccountSettings = openAccountSettings;
+window.saveDisplayName = saveDisplayName;
+window.setUnitFromAccount = setUnitFromAccount;
+window.saveAccountEmail = saveAccountEmail;
+window.saveAccountPassword = saveAccountPassword;
 window.signIn = signIn;
 window.setNewPassword = setNewPassword;
 window.toggleAuthMode = toggleAuthMode;

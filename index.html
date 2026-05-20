@@ -79,6 +79,42 @@
       <div id="sync-recover-error" style="color:var(--red);font-size:0.8rem;margin-top:8px;display:none;"></div>
       <button class="sync-submit" id="sync-recover-btn" onclick="setNewPassword()">Save Password →</button>
     </div>
+
+    <!-- Account Settings -->
+    <div id="sync-step-account" style="display:none;">
+      <span class="sync-ico">👤</span>
+      <h2>Account Settings</h2>
+      <p id="acct-signed-in-as" style="margin-bottom:20px;"></p>
+
+      <div class="acct-section">
+        <div class="acct-section-title">Display Name</div>
+        <input type="text" id="acct-name" placeholder="Your name" autocomplete="name" class="acct-input">
+        <div class="acct-status" id="acct-name-status"></div>
+        <button class="acct-save" onclick="saveDisplayName()">Save Name</button>
+      </div>
+
+      <div class="acct-section">
+        <div class="acct-section-title">Weight Unit</div>
+        <div class="acct-unit-toggle">
+          <button id="acct-unit-lbs" class="acct-unit-btn" onclick="setUnitFromAccount('lbs')">lbs</button>
+          <button id="acct-unit-kg" class="acct-unit-btn" onclick="setUnitFromAccount('kg')">kg</button>
+        </div>
+      </div>
+
+      <div class="acct-section">
+        <div class="acct-section-title">Email Address</div>
+        <input type="email" id="acct-email" placeholder="new@email.com" autocomplete="email" class="acct-input">
+        <div class="acct-status" id="acct-email-status"></div>
+        <button class="acct-save" onclick="saveAccountEmail()">Update Email</button>
+      </div>
+
+      <div class="acct-section" style="border-bottom:none;padding-bottom:0;">
+        <div class="acct-section-title">Password</div>
+        <input type="password" id="acct-password" placeholder="New password (min 6 characters)" autocomplete="new-password" minlength="6" class="acct-input">
+        <div class="acct-status" id="acct-password-status"></div>
+        <button class="acct-save" onclick="saveAccountPassword()">Update Password</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -473,7 +509,9 @@
 <div class="account-menu" id="account-menu" style="display:none;">
   <div class="account-menu-email" id="account-menu-email"></div>
   <hr class="account-menu-hr">
-  <a class="account-menu-action" href="mailto:beaudfoster@gmail.com?subject=Trimly%20Feedback" onclick="closeAccountMenu()" style="text-decoration:none;display:block;">Send feedback ✉️</a>
+  <button class="account-menu-action" onclick="openAccountSettings()">Account Settings</button>
+  <button class="account-menu-action" onclick="exportFromMenu()">Export Data</button>
+  <a class="account-menu-action" href="mailto:beaudfoster@gmail.com?subject=Trimly%20Feedback" onclick="closeAccountMenu()" style="text-decoration:none;display:block;">Send Feedback ✉️</a>
   <hr class="account-menu-hr">
   <button class="account-menu-action danger" onclick="signOutFromMenu()">Sign Out</button>
 </div>
