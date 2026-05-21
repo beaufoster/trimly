@@ -1460,8 +1460,11 @@ async function syncDown(){
     return changed;
   }catch(e){console.warn('[Trimly] sync pull failed:',e);return false;}
 }
-// Capture recovery intent before Supabase clears the hash
-const _recoveryUrl=new URLSearchParams(window.location.hash.slice(1)).get('type')==='recovery';
+// Capture recovery intent before Supabase clears the URL.
+// Implicit flow puts type in the hash; PKCE token_hash flow puts it in the query string.
+const _recoveryUrl=
+  new URLSearchParams(window.location.hash.slice(1)).get('type')==='recovery'||
+  new URLSearchParams(window.location.search).get('type')==='recovery';
 if(sb){
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==='PASSWORD_RECOVERY'||((event==='SIGNED_IN'||event==='INITIAL_SESSION')&&_recoveryUrl)){
