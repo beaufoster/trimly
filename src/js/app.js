@@ -1312,6 +1312,7 @@ async function setNewPassword(){
   errEl.style.display='none';
   const btn=$('sync-recover-btn');
   if(btn){btn.textContent='Saving…';btn.disabled=true;}
+  _recoveryUrl=false; // Prevent SIGNED_IN event from reopening the recovery overlay
   const{error}=await sb.auth.updateUser({password});
   if(error){errEl.textContent=error.message;errEl.style.display='block';if(btn){btn.textContent='Save Password →';btn.disabled=false;}return;}
   $('sync-step-recover').style.display='none';
@@ -1463,13 +1464,16 @@ async function syncDown(){
 }
 // Capture recovery intent before Supabase clears the URL.
 // Implicit flow puts type in the hash; PKCE token_hash flow puts it in the query string.
-const _recoveryUrl=
+// Use let so setNewPassword() can clear it after updateUser(), preventing SIGNED_IN from
+// reopening the recovery overlay after the password has been set.
+let _recoveryUrl=
   new URLSearchParams(window.location.hash.slice(1)).get('type')==='recovery'||
   new URLSearchParams(window.location.search).get('type')==='recovery';
 if(sb){
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==='PASSWORD_RECOVERY'||((event==='SIGNED_IN'||event==='INITIAL_SESSION')&&_recoveryUrl)){
-      currentUser=session?.user||null;
+      if(!session)return; // INITIAL_SESSION may fire with null before PASSWORD_RECOVERY; skip it
+      currentUser=session.user;
       updateSyncUI();
       $('sync-overlay').classList.add('show');
       $('sync-step-auth').style.display='none';
