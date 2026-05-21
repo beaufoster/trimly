@@ -190,7 +190,7 @@
           <span class="mico">📅</span>Target Date
         </button>
       </div>
-      <p id="occasion-hint" class="occasion-hint">Planning for a wedding, vacation, or event? <button onclick="setMode('date')" style="background:none;border:none;color:var(--green);font-weight:600;cursor:pointer;padding:0;font-size:inherit;">Switch to Target Date →</button></p>
+      <p id="occasion-hint" class="occasion-hint">Planning for a wedding, vacation, or event? Try <strong>Target Date</strong> mode above.</p>
     </div>
 
     <!-- ABOUT YOU -->
@@ -412,7 +412,7 @@
       <p style="font-size:0.8rem;color:var(--gray);margin:-4px 0 12px;">Past dates work too — backfill old weigh-ins to migrate your history.</p>
       <div class="ci-fields">
         <div class="field"><label>Date</label><input type="date" id="ci-date"></div>
-        <div class="field"><label id="lbl-ci-weight">Weight (lbs)</label><input type="number" id="ci-weight" placeholder="207.5" step="0.1" min="50" max="600" inputmode="decimal"></div>
+        <div class="field"><label id="lbl-ci-weight">Weight (lbs)</label><input type="number" id="ci-weight" placeholder="0.0" step="0.1" min="50" max="600" inputmode="decimal"></div>
         <div class="field ci-note-row"><label>Note (optional)</label><textarea id="ci-note" placeholder="e.g. felt bloated, period week, vacation…" maxlength="200"></textarea></div>
       </div>
       <button class="btn-add" id="btn-add-checkin" onclick="addCheckin()">Log It ✓</button>

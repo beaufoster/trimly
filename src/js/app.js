@@ -619,6 +619,12 @@ function renderCheckinPage(){
   const _scrollY=window.scrollY;
   const today=new Date().toISOString().split('T')[0];
   if(!$('ci-date').value)$('ci-date').value=today;
+  // Pre-fill weight with last logged entry so users don't start from scratch each week
+  const _ciWt=$('ci-weight');
+  if(_ciWt&&!_ciWt.value&&!_editId&&checkins.length){
+    const _lat=[...checkins].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+    _ciWt.value=fmtD(fromLbs(_lat.weight));
+  }
   const plan=planData||JSON.parse(localStorage.getItem(STORE+'plan')||'null');
   $('no-plan-warn').style.display=!plan?'flex':'none';
   if(plan)$('ps-start').textContent=fmtWt(plan.cw);
@@ -673,7 +679,9 @@ function renderCheckinPage(){
 function renderCheckinChart(sorted,plan,startWt,goalWt){
   const canvas=$('ciChart');if(!canvas)return;
   const ctx=canvas.getContext('2d');
-  canvas.width=canvas.parentElement.offsetWidth||340;canvas.height=220;
+  const _cs=getComputedStyle(canvas.parentElement);
+  canvas.width=(canvas.parentElement.offsetWidth-parseFloat(_cs.paddingLeft)-parseFloat(_cs.paddingRight))||340;
+  canvas.height=220;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const W=canvas.width,H=canvas.height;
   const pad={top:16,right:16,bottom:28,left:44};
@@ -720,7 +728,7 @@ function renderCheckinChart(sorted,plan,startWt,goalWt){
   ctx.strokeStyle='#e0e6e2';ctx.lineWidth=1;
   for(let i=0;i<=4;i++){const y=pad.top+(cH/4)*i;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();ctx.fillStyle='#b0b8b4';ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(maxV-((maxV-minV)/4)*i),pad.left-5,y+3);}
   ctx.beginPath();ctx.strokeStyle='#4abe7e';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.moveTo(pad.left,yP(goalWt));ctx.lineTo(W-pad.right,yP(goalWt));ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#22a05a';ctx.font='bold 10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText('Goal: '+fmtWt(goalWt),W-pad.right,yP(goalWt)-4);
+  {const gl='Goal: '+fmtWt(goalWt);ctx.fillStyle='#22a05a';ctx.font='bold 10px DM Sans,sans-serif';ctx.textAlign='left';const glW=ctx.measureText(gl).width;ctx.fillText(gl,Math.max(pad.left+4,W-pad.right-glW),yP(goalWt)-4);}
   if(projPts.length>1){ctx.beginPath();ctx.strokeStyle='#b6e8ce';ctx.lineWidth=2;ctx.setLineDash([6,4]);projPts.forEach((p,i)=>i===0?ctx.moveTo(xP(p.week),yP(p.weight)):ctx.lineTo(xP(p.week),yP(p.weight)));ctx.stroke();ctx.setLineDash([]);}
   if(trendPts.length>=2){ctx.beginPath();ctx.strokeStyle='#f59e0b';ctx.lineWidth=2;ctx.setLineDash([4,3]);trendPts.forEach((p,i)=>i===0?ctx.moveTo(xP(p.week),yP(p.weight)):ctx.lineTo(xP(p.week),yP(p.weight)));ctx.stroke();ctx.setLineDash([]);const tp=trendPts[trendPts.length-1];ctx.beginPath();ctx.arc(xP(tp.week),yP(tp.weight),4,0,Math.PI*2);ctx.fillStyle='#f59e0b';ctx.fill();}
   if(actualPts.length>1){ctx.beginPath();ctx.strokeStyle='#1a6b42';ctx.lineWidth=2.5;ctx.lineJoin='round';actualPts.forEach((p,i)=>i===0?ctx.moveTo(xP(p.week),yP(p.weight)):ctx.lineTo(xP(p.week),yP(p.weight)));ctx.stroke();}
@@ -788,8 +796,14 @@ async function addCheckin(){
   }
   if(btn)btn.disabled=false;
   renderCheckinPage();calculate();
-  // Force-clear after render in case browser restores previous input value
-  setTimeout(()=>{const f=$('ci-weight');if(f&&!_editId)f.value='';},50);
+  // After adding, reset to last logged weight (browser may restore old input value)
+  setTimeout(()=>{
+    const f=$('ci-weight');
+    if(f&&!_editId){
+      const lat=checkins.length?[...checkins].sort((a,b)=>new Date(b.date)-new Date(a.date))[0]:null;
+      f.value=lat?fmtD(fromLbs(lat.weight)):'';
+    }
+  },50);
 }
 
 function deleteCheckin(id){
@@ -1587,6 +1601,14 @@ function updateUnitLabels(){
   const ftRow=$('ht-ft-row'),cmRow=$('ht-cm-row');
   if(ftRow)ftRow.style.display=unitPref==='kg'?'none':'flex';
   if(cmRow)cmRow.style.display=unitPref==='kg'?'flex':'none';
+  // Pace button rate labels in current unit
+  const paceDesc=unitPref==='kg'
+    ?{gentle:'≤0.25 kg/wk',steady:'0.25–0.5 kg/wk',aggressive:'0.5–0.9 kg/wk'}
+    :{gentle:'≤0.5 lb/wk',steady:'0.5–1 lb/wk',aggressive:'1–2 lb/wk'};
+  ['gentle','steady','aggressive'].forEach(k=>{
+    const d=$('sc-'+k)?.querySelector('.sc-desc');
+    if(d)d.textContent=paceDesc[k];
+  });
 }
 
 // ══ GLOBAL EXPORTS ═══════════════════════════════════
@@ -1668,7 +1690,7 @@ window.addEventListener('beforeinstallprompt',e=>{
       const b=document.createElement('div');
       b.className='banner nudge';
       b.style.cssText='position:fixed;bottom:calc(var(--tab-h) + var(--safe-bottom) + 10px);left:16px;right:16px;z-index:500;cursor:pointer;';
-      b.innerHTML='<span class="bico">📱</span><div><strong>Add Trimly to your home screen</strong>Tap for quick access every weigh-in day.</div>';
+      b.innerHTML='<span class="bico">📱</span><div style="flex:1"><strong>Add Trimly to your home screen</strong> Tap for quick access every weigh-in day.</div><button onclick="event.stopPropagation();this.closest(\'.banner\').remove()" style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:1rem;color:inherit;opacity:0.6;flex-shrink:0;line-height:1" aria-label="Dismiss">✕</button>';
       b.onclick=()=>{deferredPrompt.prompt();b.remove();ph.capture('pwa_install_prompted');};
       document.body.appendChild(b);
       setTimeout(()=>b&&b.remove&&b.remove(),12000);
