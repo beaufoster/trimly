@@ -1380,6 +1380,14 @@ function resetFormToDefaults(){
   _paceOnly=true;
   try{if(calcMode==='date')setMode('weight');else calculate();}finally{_paceOnly=false;}
 }
+async function saveAboutYou(){
+  const btn=$('about-save-btn');
+  if(btn){btn.textContent='Saving…';btn.disabled=true;}
+  calculate(); // flush current field values into planData + localStorage
+  clearTimeout(_syncTimer); // cancel any pending debounced sync
+  await syncUp(); // commit immediately to Supabase
+  if(btn){btn.classList.add('saved');btn.textContent='Saved ✓';setTimeout(()=>{btn.textContent='Save details';btn.disabled=false;btn.classList.remove('saved');},2000);}
+}
 async function signOut(){
   if(!sb)return;
   clearTimeout(_syncTimer);
@@ -1661,6 +1669,7 @@ window.toggleUnit = toggleUnit;
 window.acceptCookies = acceptCookies;
 window.declineCookies = declineCookies;
 window.resetFormToDefaults = resetFormToDefaults;
+window.saveAboutYou = saveAboutYou;
 
 window.addEventListener('resize',()=>{calculate();if($('page-checkin').classList.contains('active'))renderCheckinPage();});
 
