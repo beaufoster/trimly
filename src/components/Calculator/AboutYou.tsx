@@ -36,7 +36,7 @@ export function AboutYou({ form, unit, calcMode, onFormChange, onUnitChange, onS
       gw:   fmtD(parseFloat(form.gw)   * factor),
       htFt: unit === 'lbs' ? String(Math.floor((parseInt(form.htCm) || 173) / 30.48))      : form.htFt,
       htIn: unit === 'lbs' ? String(Math.round(((parseInt(form.htCm) || 173) / 2.54) % 12)) : form.htIn,
-      htCm: unit === 'kg'  ? String(Math.round((parseInt(form.htFt) || 5) * 30.48 + (parseInt(form.htIn) || 8) * 2.54)) : form.htCm,
+      htCm: unit === 'kg'  ? String(Math.round((parseInt(form.htFt) || 5) * 30.48 + (n => isNaN(n) ? 0 : n)(parseInt(form.htIn)) * 2.54)) : form.htCm,
     })
   }
 

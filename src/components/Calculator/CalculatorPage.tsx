@@ -4,7 +4,7 @@ import { Checkin, CalcMode, Pace, Plan, Unit } from '@/types'
 import { useUI } from '@/store/ui'
 import { keys } from '@/lib/storage'
 import { ph } from '@/lib/analytics'
-import { DEMO_NAME } from '@/lib/demoData'
+import { DEMO_NAME, DEMO_PLAN } from '@/lib/demoData'
 import {
   KG_TO_LBS, actMults, addWeeks, calcBMR, fmtD,
   fromLbs, paceConfigs, simulateLoss, toLbs,
@@ -82,9 +82,12 @@ function runCalc(f: FormState, calcMode: CalcMode, pace: Pace, unit: Unit, exist
   const cw  = Math.max(toLbs(parseFloat(f.cw) || 210, unit), 50)
   const age  = parseInt(f.age) || 35
   const sex  = f.sex
+  // parseInt('0') === 0 which is falsy — use isNaN to avoid coercing 0 inches to 8/10
+  const htInRaw = parseInt(f.htIn)
+  const htInSafe = isNaN(htInRaw) ? 0 : htInRaw
   const ht   = unit === 'kg'
     ? Math.round((parseInt(f.htCm) || 178) / 2.54)
-    : (parseInt(f.htFt) || 5) * 12 + (parseInt(f.htIn) || 10)
+    : (parseInt(f.htFt) || 5) * 12 + htInSafe
   const cal  = f.cal
   const actIdx = f.act - 1
   const bmr0 = calcBMR(cw, ht, age, sex)
@@ -94,8 +97,8 @@ function runCalc(f: FormState, calcMode: CalcMode, pace: Pace, unit: Unit, exist
   const deficit = Math.max(tdee + exPerDay - safeCal, 0)
 
   const htFt = unit === 'kg' ? Math.floor((parseInt(f.htCm) || 173) / 2.54 / 12) : parseInt(f.htFt) || 5
-  const htIn  = unit === 'kg' ? Math.round(((parseInt(f.htCm) || 173) / 2.54) % 12) : parseInt(f.htIn) || 8
-  const htCm  = unit === 'lbs' ? Math.round((parseInt(f.htFt) || 5) * 30.48 + (parseInt(f.htIn) || 8) * 2.54) : parseInt(f.htCm) || 173
+  const htIn  = unit === 'kg' ? Math.round(((parseInt(f.htCm) || 173) / 2.54) % 12) : htInSafe
+  const htCm  = unit === 'lbs' ? Math.round((parseInt(f.htFt) || 5) * 30.48 + htInSafe * 2.54) : parseInt(f.htCm) || 173
 
   const basePlan = {
     age, htFt, htIn, htCm, sex, act: f.act,
@@ -173,9 +176,11 @@ export function CalculatorPage({ user, plan, checkins, unit, onSavePlan, onUnitC
     setFormReady(!!localStorage.getItem(keys.form))
   }, [user])
 
-  // When plan loads from Supabase (sign-in on fresh device), sync form if no local form cache exists
+  // When plan loads from Supabase (sign-in on fresh device), sync form if no local form cache exists.
+  // Guard against DEMO_PLAN: during sign-in the query briefly holds DEMO_PLAN before the real fetch
+  // completes, which would set planSyncedRef=true and block the actual Supabase plan from loading.
   useEffect(() => {
-    if (plan && !planSyncedRef.current && !localStorage.getItem(keys.form)) {
+    if (plan && plan !== DEMO_PLAN && !planSyncedRef.current && !localStorage.getItem(keys.form)) {
       planSyncedRef.current = true
       setFormRaw(loadSavedForm(plan, unit))
       if (plan.pace) setPace(plan.pace)
