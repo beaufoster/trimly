@@ -158,8 +158,20 @@ export function CalculatorPage({ user, plan, checkins, unit, onSavePlan, onUnitC
   const phTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const planSyncedRef = useRef(false)
   const lastSyncedWtRef = useRef<number | null>(null)
+  const prevUidRef = useRef<string | null | undefined>(undefined)
 
   const result = useMemo(() => runCalc(form, calcMode, pace, unit, plan), [form, calcMode, pace, unit, plan])
+
+  // Reset sync state whenever the signed-in user changes (sign-in, sign-out, or user switch).
+  // Without this, planSyncedRef stays true after the demo plan syncs while signed out,
+  // blocking the real plan from loading when the user signs in.
+  useEffect(() => {
+    const uid = user?.id ?? null
+    if (uid === prevUidRef.current) return
+    prevUidRef.current = uid
+    planSyncedRef.current = false
+    setFormReady(!!localStorage.getItem(keys.form))
+  }, [user])
 
   // When plan loads from Supabase (sign-in on fresh device), sync form if no local form cache exists
   useEffect(() => {
