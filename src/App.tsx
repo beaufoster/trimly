@@ -5,9 +5,11 @@ import { usePlan } from '@/hooks/usePlan'
 import { useProfile } from '@/hooks/useProfile'
 import { useUI } from '@/store/ui'
 import { IS_TEST } from '@/lib/analytics'
+import { keys } from '@/lib/storage'
 import { CalculatorPage } from '@/components/Calculator/CalculatorPage'
 import { CheckinPage } from '@/components/Checkin/CheckinPage'
 import { AuthSheet } from '@/components/Auth/AuthSheet'
+import { OnboardingSheet } from '@/components/Auth/OnboardingSheet'
 import { AccountSheet } from '@/components/Account/AccountSheet'
 import { AccountMenu } from '@/components/Account/AccountMenu'
 import { Toast } from '@/components/Shared/Toast'
@@ -20,8 +22,8 @@ export default function App() {
   const { user, loading } = useAuth()
   const { checkins, addCheckin, deleteCheckin } = useCheckins(user)
   const { plan, savePlan, isSaving: isSavingPlan } = usePlan(user)
-  const { profile, updateUnit, updateName } = useProfile(user)
-  const { page, unit, setUnit, toastMessage, celebrationQueue } = useUI()
+  const { profile, updateUnit, updateName, isLoading: profileLoading } = useProfile(user)
+  const { page, unit, setUnit, toastMessage, celebrationQueue, onboardingShown, openOnboarding } = useUI()
 
   // Sync unit pref from profile when it loads
   useEffect(() => {
@@ -29,6 +31,14 @@ export default function App() {
       setUnit(profile.unit_pref)
     }
   }, [profile?.unit_pref])
+
+  // Show onboarding for new accounts that haven't set a name
+  useEffect(() => {
+    if (!user || profileLoading || onboardingShown) return
+    if (!profile?.display_name && !localStorage.getItem(keys.name)) {
+      openOnboarding()
+    }
+  }, [user, profile, profileLoading])
 
   // Test mode indicator
   useEffect(() => {
@@ -77,6 +87,7 @@ export default function App() {
       <TabBar />
 
       <AuthSheet user={user} />
+      <OnboardingSheet unit={unit} onUpdateUnit={updateUnit} onUpdateName={updateName} />
       <AccountSheet
         user={user}
         profile={profile}

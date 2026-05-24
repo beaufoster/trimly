@@ -1,7 +1,7 @@
 {
-  "name": "Trimly",
-  "short_name": "Trimly",
-  "description": "Personal weight loss calculator and progress tracker",
+  "name": "WeightCast",
+  "short_name": "WeightCast",
+  "description": "Know exactly when you'll hit your goal.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -15,7 +15,7 @@ export function TopNav({ user, plan, checkins }: Props) {
   return (
     <header className="top-nav">
       <div className="top-nav-inner">
-        <span className="wordmark">Trimly</span>
+        <span className="wordmark">Weight<em>Cast</em></span>
         <nav className="desktop-nav-tabs">
           <DesktopTab label="Calculator" target="calculator" active={page === 'calculator'} />
           <DesktopTab label="Check-In"   target="checkin"   active={page === 'checkin'}   />

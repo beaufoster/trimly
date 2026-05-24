@@ -24,6 +24,7 @@ export interface Plan {
   lift: number       // days/week
   cardio: number     // days/week
   pace: Pace
+  startWt?: number  // original starting weight lbs, preserved across plan updates
   name?: string
 }
 

@@ -15,6 +15,8 @@ interface UIState {
   toastMessage: string | null
   syncNudgeDismissed: boolean
   celebrationQueue: Array<{ emoji: string; title: string; sub: string }>
+  onboardingOpen: boolean
+  onboardingShown: boolean
 
   setPage: (p: Page) => void
   setUnit: (u: Unit) => void
@@ -32,6 +34,8 @@ interface UIState {
   clearToast: () => void
   dismissSyncNudge: () => void
   queueCelebration: (emoji: string, title: string, sub: string) => void
+  openOnboarding: () => void
+  closeOnboarding: () => void
   shiftCelebration: () => void
 }
 
@@ -48,6 +52,8 @@ export const useUI = create<UIState>((set, get) => ({
   toastMessage:        null,
   syncNudgeDismissed:  !!localStorage.getItem(keys.syncNudgeDismissed),
   celebrationQueue:    [],
+  onboardingOpen:      false,
+  onboardingShown:     false,
 
   setPage: (p) => {
     localStorage.setItem(keys.page, p)
@@ -87,4 +93,7 @@ export const useUI = create<UIState>((set, get) => ({
     set(s => ({ celebrationQueue: [...s.celebrationQueue, { emoji, title, sub }] })),
   shiftCelebration: () =>
     set(s => ({ celebrationQueue: s.celebrationQueue.slice(1) })),
+
+  openOnboarding:  () => set({ onboardingOpen: true, onboardingShown: true }),
+  closeOnboarding: () => set({ onboardingOpen: false }),
 }))

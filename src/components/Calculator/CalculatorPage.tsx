@@ -101,6 +101,7 @@ function runCalc(f: FormState, calcMode: CalcMode, pace: Pace, unit: Unit, exist
     walk: f.walk, lift: f.lift, cardio: f.cardio,
     cal: safeCal, exPerDay, pace,
     savedAt: existingPlan?.savedAt || new Date().toISOString(),
+    startWt: existingPlan?.startWt ?? existingPlan?.cw ?? cw,
   }
 
   if (calcMode === 'date') {
@@ -152,6 +153,7 @@ export function CalculatorPage({ plan, checkins, unit, onSavePlan, onUnitChange 
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const phTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const planSyncedRef = useRef(false)
+  const lastSyncedWtRef = useRef<number | null>(null)
 
   const result = useMemo(() => runCalc(form, calcMode, pace, unit, plan), [form, calcMode, pace, unit, plan])
 
@@ -164,6 +166,17 @@ export function CalculatorPage({ plan, checkins, unit, onSavePlan, onUnitChange 
       if (plan.mode) setCalcMode(plan.mode)
     }
   }, [plan])
+
+  // Auto-sync current weight field from latest check-in
+  useEffect(() => {
+    if (!checkins.length) return
+    const sorted = [...checkins].sort((a, b) => b.date.localeCompare(a.date))
+    const latestWt = sorted[0].weight
+    if (latestWt !== lastSyncedWtRef.current) {
+      lastSyncedWtRef.current = latestWt
+      setFormRaw(prev => ({ ...prev, cw: fmtD(fromLbs(latestWt, unit)) }))
+    }
+  }, [checkins, unit])
 
   // Persist form as display cache whenever it changes
   useEffect(() => { saveFormCache(form, calcMode, pace) }, [form, calcMode, pace])

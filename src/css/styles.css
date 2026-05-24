@@ -500,6 +500,7 @@ body.is-test{padding-top:26px;}
 .top-nav{background:var(--dark);position:sticky;top:0;z-index:100;}
 .top-nav-inner{height:56px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;max-width:860px;margin:0 auto;}
 .wordmark{font-family:'Fraunces',serif;font-size:1.25rem;color:#fff;letter-spacing:-0.5px;}
+.wordmark em{font-style:normal;color:var(--green-light);}
 /* Hide desktop nav tabs on mobile */
 @media(max-width:679px){.desktop-nav-tabs{display:none;}}
 
@@ -625,6 +626,12 @@ body.is-test{padding-top:26px;}
 .pace-status.ahead{background:rgba(74,190,126,0.2);color:#4abe7e;}
 .pace-status.on{background:rgba(74,190,126,0.15);color:#7ec9a0;}
 .pace-status.behind{background:rgba(201,124,26,0.2);color:#f6b252;}
+
+/* Onboarding sheet */
+.onboarding-sheet .onboarding-form{padding:0 4px 8px;}
+.ob-optional{font-size:0.78rem;color:var(--gray);font-weight:400;}
+.ob-unit-label{display:block;margin-top:20px !important;}
+.ob-start-btn{margin-top:24px !important;}
 
 /* Desktop overrides for React layout */
 @media(min-width:680px){

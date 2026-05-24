@@ -6,7 +6,7 @@ interface Props { plan: Plan | null; checkins: Checkin[]; unit: Unit }
 export function ProgressSnapshot({ plan, checkins, unit }: Props) {
   if (!plan) return null
   const latest = checkins[checkins.length - 1]
-  const startWt  = plan.cw
+  const startWt  = plan.startWt ?? plan.cw
   const currentWt = latest?.weight ?? plan.cw
   const lost     = +(startWt - currentWt).toFixed(1)
   const remain   = +(currentWt - plan.gw).toFixed(1)

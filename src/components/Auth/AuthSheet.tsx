@@ -97,7 +97,7 @@ export function AuthSheet({ user }: Props) {
           <div className="sync-header">
             <div className="sync-lock-ico">🔐</div>
             <h2 className="sync-auth-title">Set Your Password</h2>
-            <p className="sync-auth-desc">Choose a new password for your Trimly account.</p>
+            <p className="sync-auth-desc">Choose a new password for your WeightCast account.</p>
           </div>
           <form onSubmit={handleSetPassword} className="sync-form">
             <input
