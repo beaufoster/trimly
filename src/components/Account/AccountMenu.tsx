@@ -2,6 +2,8 @@ import { User } from '@supabase/supabase-js'
 import { useUI } from '@/store/ui'
 import { supabase } from '@/lib/supabase'
 import { ph } from '@/lib/analytics'
+import { queryClient } from '@/lib/queryClient'
+import { STORE } from '@/lib/storage'
 
 interface Props { user: User | null }
 
@@ -14,6 +16,8 @@ export function AccountMenu({ user }: Props) {
     closeAccountMenu()
     await supabase.auth.signOut()
     ph.reset()
+    Object.keys(localStorage).filter(k => k.startsWith(STORE)).forEach(k => localStorage.removeItem(k))
+    queryClient.clear()
     showToast('Signed out. Your data is saved to your account.')
   }
 

@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useUI } from '@/store/ui'
 import { ph } from '@/lib/analytics'
 import { queryClient } from '@/lib/queryClient'
+import { STORE } from '@/lib/storage'
 
 interface Props { user: User | null }
 
@@ -133,6 +134,8 @@ export function AuthSheet({ user }: Props) {
               if (!supabase) return
               await supabase.auth.signOut()
               ph.reset()
+              Object.keys(localStorage).filter(k => k.startsWith(STORE)).forEach(k => localStorage.removeItem(k))
+              queryClient.clear()
               closeSyncSheet()
               showToast('Signed out. Your data is saved to your account.')
             }}>Sign Out</button>

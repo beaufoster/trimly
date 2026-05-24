@@ -25,7 +25,10 @@
       "Bash(curl -s https://beaufoster.github.io/trimly/)",
       "Bash(node -e ' *)",
       "Bash(npm install *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Bash(npx vercel *)"
     ],
     "additionalDirectories": [
       "/Users/beau/Documents/app_creations"

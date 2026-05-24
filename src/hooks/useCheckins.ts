@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { Checkin } from '@/types'
 import { keys } from '@/lib/storage'
+import { DEMO_CHECKINS } from '@/lib/demoData'
 
 const LOCAL_KEY = keys.form.replace('form', 'checkins') // tr_checkins
 
@@ -46,12 +47,12 @@ export function useCheckins(user: User | null) {
   const query = useQuery({
     queryKey: uid ? checkinKeys.all(uid) : ['checkins', 'offline'],
     queryFn: async () => {
-      if (!uid) return loadLocal()      // offline: use localStorage
+      if (!uid) return loadLocal().length ? loadLocal() : DEMO_CHECKINS
       const remote = await fetchRemote(uid)
       saveLocal(remote)                 // keep cache warm for offline
       return remote
     },
-    placeholderData: loadLocal,          // show cache while fetching; unlike initialData, never blocks the fetch
+    placeholderData: () => loadLocal().length ? loadLocal() : DEMO_CHECKINS,
     staleTime: 30_000,
   })
 

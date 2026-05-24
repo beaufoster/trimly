@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { Plan } from '@/types'
+import { DEMO_PLAN } from '@/lib/demoData'
 
 const LOCAL_KEY = 'tr_plan'
 
@@ -24,7 +25,7 @@ export function usePlan(user: User | null) {
   const query = useQuery({
     queryKey: uid ? planKeys.all(uid) : ['plan', 'offline'],
     queryFn: async () => {
-      if (!uid || !supabase) return loadLocal()
+      if (!uid || !supabase) return loadLocal() ?? DEMO_PLAN
       const { data, error } = await supabase
         .from('user_plans')
         .select('data')
@@ -35,7 +36,7 @@ export function usePlan(user: User | null) {
       saveLocal(plan)
       return plan
     },
-    placeholderData: loadLocal,          // show cache while fetching; unlike initialData, never blocks the fetch
+    placeholderData: () => loadLocal() ?? DEMO_PLAN,
     staleTime: 30_000,
   })
 

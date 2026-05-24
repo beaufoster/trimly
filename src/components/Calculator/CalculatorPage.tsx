@@ -4,6 +4,7 @@ import { Checkin, CalcMode, Pace, Plan, Unit } from '@/types'
 import { useUI } from '@/store/ui'
 import { keys } from '@/lib/storage'
 import { ph } from '@/lib/analytics'
+import { DEMO_NAME } from '@/lib/demoData'
 import {
   KG_TO_LBS, actMults, addWeeks, calcBMR, fmtD,
   fromLbs, paceConfigs, simulateLoss, toLbs,
@@ -147,8 +148,8 @@ function runCalc(f: FormState, calcMode: CalcMode, pace: Pace, unit: Unit, exist
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export function CalculatorPage({ plan, checkins, unit, onSavePlan, onUnitChange }: Props) {
-  const { calcMode, pace, setCalcMode, setPace, showToast } = useUI()
+export function CalculatorPage({ user, plan, checkins, unit, onSavePlan, onUnitChange }: Props) {
+  const { calcMode, pace, setCalcMode, setPace, showToast, openSyncSheet } = useUI()
   const [form, setFormRaw] = useState<FormState>(() => loadSavedForm(plan, unit))
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const phTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -193,6 +194,7 @@ export function CalculatorPage({ plan, checkins, unit, onSavePlan, onUnitChange 
   }
 
   async function handleSaveAboutYou() {
+    if (!user) { openSyncSheet('signup'); return }
     if (!result.plan) { showToast('Fix your values before saving.'); return }
     setSaveState('saving')
     try {
@@ -205,14 +207,17 @@ export function CalculatorPage({ plan, checkins, unit, onSavePlan, onUnitChange 
     }
   }
 
-  const name = localStorage.getItem(keys.name) || ''
+  const name = user ? (localStorage.getItem(keys.name) || '') : DEMO_NAME
 
   return (
     <div className="page page-calculator active">
       <div className="hero-band">
         {name && <div className="hero-name-line">Hi, {name}! 👋</div>}
         <p className="hero-sub" id="hero-greeting">
-          {name ? 'Adjust your plan and watch the results update live.' : 'Adjust diet & exercise — watch your results update live.'}
+          {user
+            ? (name ? 'Adjust your plan and watch the results update live.' : 'Adjust diet & exercise — watch your results update live.')
+            : <>This is <strong>sample data</strong>. <button className="hero-demo-link" onClick={() => openSyncSheet('signup')}>Create your free account</button> to save your own plan.</>
+          }
         </p>
         <div className="mode-switch">
           <button className={`mode-btn${calcMode === 'weight' ? ' active' : ''}`} onClick={() => setCalcMode('weight')}>

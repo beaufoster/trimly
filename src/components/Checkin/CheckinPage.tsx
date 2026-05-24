@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { Checkin, Plan, Unit } from '@/types'
 import { useUI } from '@/store/ui'
+import { DEMO_NAME } from '@/lib/demoData'
 import { ph } from '@/lib/analytics'
 import { fmtWt } from '@/utils/calculator'
 import { calcStreakFromEntries } from '@/utils/streak'
@@ -36,8 +37,8 @@ function calcPaceStatus(plan: Plan, checkins: Checkin[]): { label: string; cls: 
   return           { label: '⚠️ Behind pace',            cls: 'pace-status behind' }
 }
 
-export function CheckinPage({ plan, checkins, unit, onAdd, onDelete }: Props) {
-  const { editId, setEditId, showToast, queueCelebration } = useUI()
+export function CheckinPage({ user, plan, checkins, unit, onAdd, onDelete }: Props) {
+  const { editId, setEditId, showToast, queueCelebration, openSyncSheet } = useUI()
   const [celebratedMilestones, setCelebratedMilestones] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('tr_celebrated') || '[]') } catch { return [] }
   })
@@ -48,6 +49,8 @@ export function CheckinPage({ plan, checkins, unit, onAdd, onDelete }: Props) {
   const paceStatus = plan ? calcPaceStatus(plan, checkins) : null
 
   async function handleSubmit(date: string, weight: number, note: string) {
+    if (!user) { openSyncSheet('signup'); return }
+
     const editingCheckin = editId != null ? checkins.find(c => c.id === editId) : null
 
     if (!editingCheckin && checkins.some(c => c.date === date)) {
@@ -102,10 +105,12 @@ export function CheckinPage({ plan, checkins, unit, onAdd, onDelete }: Props) {
     })
   }
 
+  const isDemo = !user
+
   return (
     <div className="page page-checkin active">
       <div className="ci-page-hero">
-        <h1>Weekly Check‑In</h1>
+        <h1>{isDemo ? `${DEMO_NAME}'s Check‑In` : 'Weekly Check‑In'}</h1>
         <div className="ci-hero-badges">
           <div className="streak-badge">
             {streak > 0 ? `🔥 ${streak}-week streak` : 'Log your weight weekly'}
@@ -115,10 +120,16 @@ export function CheckinPage({ plan, checkins, unit, onAdd, onDelete }: Props) {
       </div>
 
       <div className="cards-wrap">
-        {!plan && (
-          <div className="banner warn" id="no-plan-warn" style={{ marginBottom: 16 }}>
-            <span className="bico">⚠️</span>
-            <div>Set up your plan on the Calculator tab first.</div>
+        {isDemo && (
+          <div className="banner demo-banner" style={{ marginBottom: 16 }}>
+            <span className="bico">👀</span>
+            <div>
+              <strong>You're viewing demo data.</strong>{' '}
+              <button className="demo-signup-link" onClick={() => openSyncSheet('signup')}>
+                Create a free account
+              </button>{' '}
+              to track your own progress.
+            </div>
           </div>
         )}
 
@@ -142,8 +153,8 @@ export function CheckinPage({ plan, checkins, unit, onAdd, onDelete }: Props) {
           unit={unit}
           plan={plan}
           editId={editId}
-          onEdit={setEditId}
-          onDelete={onDelete}
+          onEdit={isDemo ? () => openSyncSheet('signup') : setEditId}
+          onDelete={isDemo ? async () => { openSyncSheet('signup') } : onDelete}
         />
       </div>
     </div>
