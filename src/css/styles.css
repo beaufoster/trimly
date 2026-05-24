@@ -613,6 +613,19 @@ body.is-test{padding-top:26px;}
 /* app-main wrapper */
 .app-main{min-height:calc(100vh - 56px);}
 
+/* Chart legend */
+.chart-legend{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:0.7rem;color:var(--gray);font-weight:500;}
+.legend-actual,.legend-proj{display:inline-block;width:18px;height:2.5px;border-radius:2px;margin-right:3px;vertical-align:middle;}
+.legend-actual{background:#1a6b42;}
+.legend-proj{background:#22a05a55;border-top:1.5px dashed #22a05a88;}
+
+/* Pace status badge */
+.ci-hero-badges{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.pace-status{font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:100px;}
+.pace-status.ahead{background:rgba(74,190,126,0.2);color:#4abe7e;}
+.pace-status.on{background:rgba(74,190,126,0.15);color:#7ec9a0;}
+.pace-status.behind{background:rgba(201,124,26,0.2);color:#f6b252;}
+
 /* Desktop overrides for React layout */
 @media(min-width:680px){
   .top-nav{display:flex !important;}

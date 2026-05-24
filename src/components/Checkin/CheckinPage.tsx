@@ -21,15 +21,31 @@ interface Props {
 
 const MILESTONE_WEIGHTS = [4, 8, 13, 26, 52]
 
+function calcPaceStatus(plan: Plan, checkins: Checkin[]): { label: string; cls: string } | null {
+  if (!plan.savedAt || !plan.sim.length || !checkins.length) return null
+  const savedMs = new Date(plan.savedAt).getTime()
+  const weeksSince = (Date.now() - savedMs) / (7 * 24 * 3600 * 1000)
+  if (weeksSince < 1) return null
+  const weekIdx = Math.min(Math.floor(weeksSince) - 1, plan.sim.length - 1)
+  const projected = plan.sim[weekIdx].weight
+  const sorted    = [...checkins].sort((a, b) => b.date.localeCompare(a.date))
+  const actual    = sorted[0].weight
+  const diff      = projected - actual // positive = ahead (lost more than planned)
+  if (diff > 2)   return { label: '🟢 Ahead of pace',   cls: 'pace-status ahead' }
+  if (diff >= -1) return { label: '✅ On pace',           cls: 'pace-status on'    }
+  return           { label: '⚠️ Behind pace',            cls: 'pace-status behind' }
+}
+
 export function CheckinPage({ plan, checkins, unit, onAdd, onDelete }: Props) {
   const { editId, setEditId, showToast, queueCelebration } = useUI()
   const [celebratedMilestones, setCelebratedMilestones] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('tr_celebrated') || '[]') } catch { return [] }
   })
 
-  const sorted = [...checkins].sort((a, b) => a.date.localeCompare(b.date))
-  const latest = sorted[sorted.length - 1]
-  const streak = calcStreakFromEntries(checkins)
+  const sorted     = [...checkins].sort((a, b) => a.date.localeCompare(b.date))
+  const latest     = sorted[sorted.length - 1]
+  const streak     = calcStreakFromEntries(checkins)
+  const paceStatus = plan ? calcPaceStatus(plan, checkins) : null
 
   async function handleSubmit(date: string, weight: number, note: string) {
     const editingCheckin = editId != null ? checkins.find(c => c.id === editId) : null
@@ -90,8 +106,11 @@ export function CheckinPage({ plan, checkins, unit, onAdd, onDelete }: Props) {
     <div className="page page-checkin active">
       <div className="ci-page-hero">
         <h1>Weekly Check‑In</h1>
-        <div className="streak-badge">
-          {streak > 0 ? `🔥 ${streak}-week streak` : 'Log your weight weekly'}
+        <div className="ci-hero-badges">
+          <div className="streak-badge">
+            {streak > 0 ? `🔥 ${streak}-week streak` : 'Log your weight weekly'}
+          </div>
+          {paceStatus && <div className={paceStatus.cls}>{paceStatus.label}</div>}
         </div>
       </div>
 

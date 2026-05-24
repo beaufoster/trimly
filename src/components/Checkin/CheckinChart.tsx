@@ -16,50 +16,84 @@ export function CheckinChart({ checkins, plan, unit }: Props) {
     const parent = canvas.parentElement!
     const cs = getComputedStyle(parent)
     canvas.width  = parent.offsetWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) || 340
-    canvas.height = 200
+    canvas.height = 220
 
     const W = canvas.width, H = canvas.height
-    const pad = { top: 20, right: 16, bottom: 32, left: 52 }
-    const weights = checkins.map(c => c.weight)
-    const goalWt  = plan?.gw ?? null
-    const minW = Math.min(...weights, goalWt ?? Infinity) - 3
-    const maxW = Math.max(...weights) + 3
-    const n = checkins.length
-    const xP = (i: number) => pad.left + i * (W - pad.left - pad.right) / (n - 1)
+    const pad = { top: 24, right: 16, bottom: 36, left: 52 }
+
+    // Build projected points from plan sim (date-aligned)
+    const savedMs  = plan?.savedAt ? new Date(plan.savedAt).getTime() : null
+    const projPts: Array<{ ms: number; weight: number }> = []
+    if (plan && savedMs) {
+      projPts.push({ ms: savedMs, weight: plan.cw })
+      plan.sim.forEach(s => {
+        projPts.push({ ms: savedMs + s.week * 7 * 24 * 3600 * 1000, weight: s.weight })
+      })
+    }
+
+    // X-axis: date-based, spanning actual check-ins ± some buffer
+    const ciMs = checkins.map(c => new Date(c.date).getTime())
+    const allMs = [...ciMs, ...projPts.map(p => p.ms)]
+    const minMs = Math.min(...allMs)
+    const maxMs = Math.max(...allMs)
+    const span  = Math.max(maxMs - minMs, 7 * 24 * 3600 * 1000) // at least 1 week
+    const xFromMs = (ms: number) =>
+      pad.left + ((ms - minMs) / span) * (W - pad.left - pad.right)
+
+    // Y-axis: all weights
+    const actualWts = checkins.map(c => c.weight)
+    const projWts   = projPts.map(p => p.weight)
+    const goalWt    = plan?.gw ?? null
+    const allWts    = [...actualWts, ...projWts, ...(goalWt != null ? [goalWt] : [])]
+    const minW = Math.min(...allWts) - 3
+    const maxW = Math.max(...allWts) + 3
     const yP = (w: number) => H - pad.bottom - (w - minW) / (maxW - minW) * (H - pad.top - pad.bottom)
 
     ctx.clearRect(0, 0, W, H)
 
-    // Goal line
+    // Goal line (very subtle)
     if (goalWt != null) {
-      ctx.beginPath(); ctx.strokeStyle = '#22a05a33'; ctx.lineWidth = 1; ctx.setLineDash([4, 4])
+      ctx.beginPath(); ctx.strokeStyle = '#22a05a30'; ctx.lineWidth = 1; ctx.setLineDash([4, 6])
       ctx.moveTo(pad.left, yP(goalWt)); ctx.lineTo(W - pad.right, yP(goalWt)); ctx.stroke()
       ctx.setLineDash([])
-      const gl = 'Goal: ' + fmtWt(goalWt, unit)
-      ctx.fillStyle = '#22a05a'; ctx.font = 'bold 10px DM Sans,sans-serif'; ctx.textAlign = 'left'
-      const glW = ctx.measureText(gl).width
-      ctx.fillText(gl, Math.max(pad.left + 4, W - pad.right - glW), yP(goalWt) - 4)
+      ctx.fillStyle = '#22a05a88'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'left'
+      ctx.fillText('Goal ' + fmtWt(goalWt, unit), pad.left + 4, yP(goalWt) - 4)
     }
 
-    // Actual line
-    ctx.beginPath(); ctx.strokeStyle = '#22a05a'; ctx.lineWidth = 2.5
-    checkins.forEach((c, i) => { i === 0 ? ctx.moveTo(xP(i), yP(c.weight)) : ctx.lineTo(xP(i), yP(c.weight)) })
+    // Projected line (dashed, muted green)
+    if (projPts.length > 1) {
+      ctx.beginPath(); ctx.strokeStyle = '#22a05a55'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4])
+      projPts.forEach((p, i) => {
+        const x = xFromMs(p.ms), y = yP(p.weight)
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+      })
+      ctx.stroke(); ctx.setLineDash([])
+      // Label at plan start
+      ctx.fillStyle = '#22a05a88'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'left'
+      ctx.fillText('Projected', xFromMs(projPts[0].ms) + 4, yP(projPts[0].weight) - 6)
+    }
+
+    // Actual line (solid)
+    ctx.beginPath(); ctx.strokeStyle = '#1a6b42'; ctx.lineWidth = 2.5
+    checkins.forEach((c, i) => {
+      const x = xFromMs(new Date(c.date).getTime()), y = yP(c.weight)
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    })
     ctx.stroke()
 
-    // Dots
-    checkins.forEach((c, i) => {
-      ctx.beginPath(); ctx.arc(xP(i), yP(c.weight), 4, 0, Math.PI * 2)
-      ctx.fillStyle = '#22a05a'; ctx.fill()
+    // Dots on actual
+    checkins.forEach(c => {
+      ctx.beginPath()
+      ctx.arc(xFromMs(new Date(c.date).getTime()), yP(c.weight), 4, 0, Math.PI * 2)
+      ctx.fillStyle = '#1a6b42'; ctx.fill()
     })
 
-    // X labels
+    // X labels (dates)
     ctx.fillStyle = '#999'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'center'
-    const step = Math.ceil(n / 6)
+    const step = Math.ceil(checkins.length / 5)
     checkins.forEach((c, i) => {
-      if (i % step === 0 || i === n - 1) {
-        const label = c.date.slice(5) // MM-DD
-        ctx.fillText(label, xP(i), H - 10)
-      }
+      if (i % step === 0 || i === checkins.length - 1)
+        ctx.fillText(c.date.slice(5), xFromMs(new Date(c.date).getTime()), H - 10)
     })
 
     // Y labels
@@ -72,7 +106,13 @@ export function CheckinChart({ checkins, plan, unit }: Props) {
 
   return (
     <div className="card ci-chart-card">
-      <div className="card-title"><div className="ico">📈</div> Progress Chart</div>
+      <div className="card-title">
+        <div className="ico">📈</div> Progress Chart
+        <span className="chart-legend">
+          <span className="legend-actual" />Actual
+          <span className="legend-proj" />Projected
+        </span>
+      </div>
       <canvas ref={canvasRef} />
     </div>
   )
