@@ -3,8 +3,8 @@
 ## What this is
 WeightCast is a personal weight loss calculator and weekly check-in tracker. React 18 + TypeScript PWA, deployed on Vercel.
 
-**Live URL:** https://weightcast.com (also https://trimly-nu.vercel.app)  
-**Repo:** https://github.com/beaufoster/trimly  
+**Live URL:** https://weightcast.com  
+**Repo:** https://github.com/beaufoster/weightcast  
 **Owner:** Beau Foster (beaudfoster@gmail.com)
 
 ---
@@ -49,7 +49,7 @@ All tables have RLS — users can only read/write their own rows.
 
 **Auth redirect URLs** (set in Supabase → Authentication → URL Configuration):
 - Site URL: `https://weightcast.com`
-- Redirect URLs: `https://weightcast.com/**`, `https://www.weightcast.com/**`, `https://trimly-nu.vercel.app/**`
+- Redirect URLs: `https://weightcast.com/**`, `https://www.weightcast.com/**`
 
 ---
 
@@ -70,7 +70,7 @@ When no user is signed in, the app shows read-only demo data (defined in `src/li
 
 Test password: ask Beau — not stored here.
 
-To run in test mode (disables analytics, uses `trimly_test_` localStorage prefix):
+To run in test mode (disables analytics, uses `wc_test_` localStorage prefix):
 ```
 https://weightcast.com/?env=test
 ```
@@ -146,7 +146,7 @@ npx playwright show-report
 ---
 
 ## Common gotchas
-- **localStorage prefix:** `tr_` in production, `trimly_test_` when `?env=test`
+- **localStorage prefix:** `tr_` in production, `wc_test_` when `?env=test`
 - **SW cache:** hard refresh (Cmd+Shift+R) bypasses service worker. Cache key is `weightcast-v1` — bump it in `public/sw.js` if assets are stale after deploy
 - **Demo data:** stored in `src/lib/demoData.ts` — never written to localStorage
 - **Form cache:** only persisted (`tr_form`) when user is signed in; demo mode never writes to localStorage

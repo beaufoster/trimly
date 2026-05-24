@@ -330,7 +330,7 @@ test('cookie consent is stored in localStorage after accept', async ({ page }) =
   });
   await page.locator('#cookie-banner button').first().click();
   await page.waitForTimeout(300);
-  const consent = await page.evaluate(() => localStorage.getItem('trimly_cookie_consent'));
+  const consent = await page.evaluate(() => localStorage.getItem('weightcast_cookie_consent'));
   expect(['accepted', 'declined']).toContain(consent);
 });
 
@@ -375,9 +375,9 @@ test('plan is saved to localStorage after calculate', async ({ page }) => {
   await page.locator('#gw').fill('170');
   await page.locator('#gw').press('Tab');
   await page.waitForTimeout(600);
-  // test mode uses trimly_test_ prefix
+  // test mode uses wc_test_ prefix
   const plan = await page.evaluate(() =>
-    localStorage.getItem('trimly_test_plan') || localStorage.getItem('tr_plan')
+    localStorage.getItem('wc_test_plan') || localStorage.getItem('tr_plan')
   );
   expect(plan).not.toBeNull();
   const parsed = JSON.parse(plan);
@@ -391,9 +391,9 @@ test('check-ins are saved to localStorage', async ({ page }) => {
   await page.locator('#ci-date').fill('2025-03-01');
   await page.locator('#btn-add-checkin').click();
   await page.waitForTimeout(400);
-  // test mode uses trimly_test_ prefix
+  // test mode uses wc_test_ prefix
   const stored = await page.evaluate(() =>
-    localStorage.getItem('trimly_test_checkins') || localStorage.getItem('tr_checkins')
+    localStorage.getItem('wc_test_checkins') || localStorage.getItem('tr_checkins')
   );
   expect(stored).not.toBeNull();
   const checkins = JSON.parse(stored);

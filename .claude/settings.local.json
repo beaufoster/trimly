@@ -29,7 +29,17 @@
       "Read(//tmp/**)",
       "Read(//private/tmp/**)",
       "Bash(npx vercel *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(git -C /Users/beau/Documents/app_creations/WeightCast remote set-url origin git@github.com:beaufoster/weightcast.git)",
+      "Bash(git -C /Users/beau/Documents/app_creations/WeightCast remote -v)",
+      "mcp__claude_ai_Supabase__get_project",
+      "Read(//Users/beau/.local/share/com.vercel.cli/**)",
+      "Read(//Users/beau/.config/vercel/**)",
+      "Read(//Users/beau/**)",
+      "Bash(python3 -c \"import sys,json; projects=json.load\\(sys.stdin\\)['projects']; [print\\(p['id'], p['name']\\) for p in projects]\")",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(git -C /Users/beau/Documents/app_creations/WeightCast log --oneline -3)",
+      "Bash(git -C /Users/beau/Documents/app_creations/WeightCast add CLAUDE.md README.md index.html package-lock.json public/404.html public/privacy.html src/components/Calculator/CalculatorPage.tsx src/hooks/usePlan.ts src/lib/storage.ts tests/e2e/account.spec.js tests/e2e/app.spec.js .github/workflows/deploy.yml .vercel/project.json .claude/settings.local.json)"
     ],
     "additionalDirectories": [
       "/Users/beau/Documents/app_creations"

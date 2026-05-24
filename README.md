@@ -1,4 +1,4 @@
-# Trimly - Weight Loss Calculator
+# WeightCast — Weight Loss Calculator
 
 A progressive web app for tracking weight loss progress and calculating personalized weight loss plans.
 
@@ -43,7 +43,7 @@ The built files will be in the `dist/` directory, ready for deployment.
 ## Project Structure
 
 ```
-trimly/
+weightcast/
 ├── index.html          # Main HTML structure
 ├── src/
 │   ├── css/

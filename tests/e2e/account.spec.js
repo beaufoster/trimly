@@ -12,8 +12,8 @@ test.beforeEach(async ({ page }) => {
 
 test('auth sheet opens in signup mode for new users', async ({ page }) => {
   // No user_hint in storage → should default to Create Account
-  // In test mode (/?env=test) the app uses the 'trimly_test_' prefix
-  await page.evaluate(() => localStorage.removeItem('trimly_test_user_hint'));
+  // In test mode (/?env=test) the app uses the 'wc_test_' prefix
+  await page.evaluate(() => localStorage.removeItem('wc_test_user_hint'));
   await page.evaluate(() => {
     document.getElementById('sync-overlay').classList.add('show');
     document.getElementById('sync-step-auth').style.display = 'block';
@@ -26,8 +26,8 @@ test('auth sheet opens in signup mode for new users', async ({ page }) => {
 test('auth sheet opens in signin mode for returning users', async ({ page }) => {
   // Simulate returning user by setting user_hint
   await page.evaluate(() => {
-    // In test mode (/?env=test) the app uses the 'trimly_test_' prefix
-    localStorage.setItem('trimly_test_user_hint', JSON.stringify({ id: 'abc', email: 'test@example.com' }));
+    // In test mode (/?env=test) the app uses the 'wc_test_' prefix
+    localStorage.setItem('wc_test_user_hint', JSON.stringify({ id: 'abc', email: 'test@example.com' }));
   });
   // Reload so the app reads the hint on init
   await page.reload();
@@ -128,22 +128,22 @@ test('account menu has Sign Out option', async ({ page }) => {
 // ── Unit pref sync (localStorage) ─────────────────────────────────────────────
 
 test('unit pref is saved to localStorage on toggle', async ({ page }) => {
-  // In test mode (/?env=test) the app uses the 'trimly_test_' prefix
-  const before = await page.evaluate(() => localStorage.getItem('trimly_test_unit') || 'lbs');
+  // In test mode (/?env=test) the app uses the 'wc_test_' prefix
+  const before = await page.evaluate(() => localStorage.getItem('wc_test_unit') || 'lbs');
   await page.evaluate(() => window.toggleUnit && window.toggleUnit());
   await page.waitForTimeout(200);
-  const after = await page.evaluate(() => localStorage.getItem('trimly_test_unit'));
+  const after = await page.evaluate(() => localStorage.getItem('wc_test_unit'));
   expect(after).not.toBe(before);
 });
 
 test('unit pref persists across reload', async ({ page }) => {
-  // In test mode (/?env=test) the app uses the 'trimly_test_' prefix
+  // In test mode (/?env=test) the app uses the 'wc_test_' prefix
   await page.evaluate(() => {
-    localStorage.setItem('trimly_test_unit', 'kg');
+    localStorage.setItem('wc_test_unit', 'kg');
   });
   await page.reload();
   await page.waitForLoadState('networkidle');
-  const stored = await page.evaluate(() => localStorage.getItem('trimly_test_unit'));
+  const stored = await page.evaluate(() => localStorage.getItem('wc_test_unit'));
   expect(stored).toBe('kg');
 });
 
@@ -151,9 +151,9 @@ test('unit pref persists across reload', async ({ page }) => {
 // Navigate to /404.html directly — Vite dev server serves it from public/;
 // Vercel also maps unknown routes to this file with a 404 status.
 
-test('404 page contains Trimly branding', async ({ page }) => {
+test('404 page contains WeightCast branding', async ({ page }) => {
   await page.goto('/404.html');
-  await expect(page.locator('body')).toContainText('Trimly');
+  await expect(page.locator('body')).toContainText('WeightCast');
 });
 
 test('404 page has a link back to the app', async ({ page }) => {

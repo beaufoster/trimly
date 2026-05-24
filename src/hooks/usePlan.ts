@@ -3,8 +3,9 @@ import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { Plan } from '@/types'
 import { DEMO_PLAN } from '@/lib/demoData'
+import { STORE } from '@/lib/storage'
 
-const LOCAL_KEY = 'tr_plan'
+const LOCAL_KEY = STORE + 'plan'
 
 function loadLocal(): Plan | null {
   try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || 'null') } catch { return null }

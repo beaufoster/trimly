@@ -152,6 +152,9 @@ export function CalculatorPage({ user, plan, checkins, unit, onSavePlan, onUnitC
   const { calcMode, pace, setCalcMode, setPace, showToast, openSyncSheet } = useUI()
   const [form, setFormRaw] = useState<FormState>(() => loadSavedForm(plan, unit))
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  // formReady: true once the form has a real source of truth (cache or Supabase plan).
+  // Guards saveFormCache so defaults aren't written to cache before the plan loads on sign-in.
+  const [formReady, setFormReady] = useState(() => !!localStorage.getItem(keys.form))
   const phTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const planSyncedRef = useRef(false)
   const lastSyncedWtRef = useRef<number | null>(null)
@@ -165,6 +168,7 @@ export function CalculatorPage({ user, plan, checkins, unit, onSavePlan, onUnitC
       setFormRaw(loadSavedForm(plan, unit))
       if (plan.pace) setPace(plan.pace)
       if (plan.mode) setCalcMode(plan.mode)
+      setFormReady(true)
     }
   }, [plan])
 
@@ -179,10 +183,10 @@ export function CalculatorPage({ user, plan, checkins, unit, onSavePlan, onUnitC
     }
   }, [checkins, unit, user])
 
-  // Persist form as display cache only when signed in (avoids demo values leaking into localStorage)
+  // Persist form as display cache only when signed in and form has a real source of truth
   useEffect(() => {
-    if (user) saveFormCache(form, calcMode, pace)
-  }, [form, calcMode, pace, user])
+    if (user && formReady) saveFormCache(form, calcMode, pace)
+  }, [form, calcMode, pace, user, formReady])
 
   // Analytics debounce
   const trackSlider = useCallback(() => {

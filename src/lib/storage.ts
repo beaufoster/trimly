@@ -1,6 +1,6 @@
 import { IS_TEST } from './analytics'
 
-export const STORE = IS_TEST ? 'trimly_test_' : 'tr_'
+export const STORE = IS_TEST ? 'wc_test_' : 'tr_'
 
 export const keys = {
   unit:              STORE + 'unit',
