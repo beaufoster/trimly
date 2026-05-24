@@ -1,4 +1,6 @@
-const CACHE = 'trimly-v3';
+const CACHE = 'weightcast-v1';
+
+self.addEventListener('install', () => self.skipWaiting());
 
 // Cache versioned (hashed) assets permanently, network-first for navigation
 self.addEventListener('fetch', e => {
