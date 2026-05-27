@@ -42,7 +42,7 @@ interface UIState {
 export const useUI = create<UIState>((set, get) => ({
   page:                (localStorage.getItem(keys.page) as Page) || 'calculator',
   unit:                (localStorage.getItem(keys.unit) as Unit) || 'lbs',
-  calcMode:            'weight',
+  calcMode:            (localStorage.getItem(keys.mode) as CalcMode) || 'weight',
   pace:                'steady',
   editId:              null,
   authMode:            'signin',
@@ -63,7 +63,10 @@ export const useUI = create<UIState>((set, get) => ({
     localStorage.setItem(keys.unit, u)
     set({ unit: u })
   },
-  setCalcMode: (m) => set({ calcMode: m }),
+  setCalcMode: (m) => {
+    localStorage.setItem(keys.mode, m)
+    set({ calcMode: m })
+  },
   setPace:     (p) => set({ pace: p }),
   setEditId:   (id) => set({ editId: id }),
   setAuthMode: (m) => set({ authMode: m }),

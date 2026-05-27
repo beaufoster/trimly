@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Unit } from '@/types'
+import { CalcMode, Unit } from '@/types'
 import { useUI } from '@/store/ui'
 
 interface Props {
@@ -9,15 +9,17 @@ interface Props {
 }
 
 export function OnboardingSheet({ unit, onUpdateUnit, onUpdateName }: Props) {
-  const { onboardingOpen, closeOnboarding } = useUI()
-  const [name, setName]   = useState('')
-  const [saving, setSaving] = useState(false)
+  const { onboardingOpen, closeOnboarding, setCalcMode } = useUI()
+  const [name, setName]       = useState('')
+  const [mode, setMode]       = useState<CalcMode>('weight')
+  const [saving, setSaving]   = useState(false)
 
   if (!onboardingOpen) return null
 
   async function handleStart() {
     setSaving(true)
     if (name.trim()) await onUpdateName(name.trim())
+    setCalcMode(mode)
     setSaving(false)
     closeOnboarding()
   }
@@ -53,6 +55,18 @@ export function OnboardingSheet({ unit, onUpdateUnit, onUpdateName }: Props) {
                 onClick={() => onUpdateUnit(u)}
               >{u}</button>
             ))}
+          </div>
+
+          <label className="account-label ob-unit-label">What's your focus?</label>
+          <div className="mode-switch ob-mode-switch">
+            <button className={`mode-btn${mode === 'weight' ? ' active' : ''}`} onClick={() => setMode('weight')}>
+              <span className="mico">🎯</span>Goal Weight
+              <span className="mode-sub">Set a target weight</span>
+            </button>
+            <button className={`mode-btn${mode === 'date' ? ' active' : ''}`} onClick={() => setMode('date')}>
+              <span className="mico">📅</span>Target Date
+              <span className="mode-sub">Set a deadline</span>
+            </button>
           </div>
 
           <button className="sync-submit-btn ob-start-btn" onClick={handleStart} disabled={saving}>

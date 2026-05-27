@@ -639,6 +639,7 @@ body.is-test{padding-top:26px;}
 .onboarding-sheet .onboarding-form{padding:0 4px 8px;}
 .ob-optional{font-size:0.78rem;color:var(--gray);font-weight:400;}
 .ob-unit-label{display:block;margin-top:20px !important;}
+.ob-mode-switch{background:var(--gray-light);margin-top:8px;}
 .ob-start-btn{margin-top:24px !important;}
 
 /* Desktop overrides for React layout */

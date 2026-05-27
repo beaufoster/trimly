@@ -5,6 +5,7 @@ export const STORE = IS_TEST ? 'wc_test_' : 'tr_'
 export const keys = {
   unit:              STORE + 'unit',
   page:              STORE + 'page',
+  mode:              STORE + 'mode',
   name:              STORE + 'name',
   form:              STORE + 'form',
   celebrated:        STORE + 'celebrated',
