@@ -245,9 +245,11 @@ export function CalculatorPage({ user, plan, checkins, unit, onSavePlan, onUnitC
         <div className="mode-switch">
           <button className={`mode-btn${calcMode === 'weight' ? ' active' : ''}`} onClick={() => setCalcMode('weight')}>
             <span className="mico">🎯</span>Goal Weight
+            <span className="mode-sub">Set a target weight</span>
           </button>
           <button className={`mode-btn${calcMode === 'date' ? ' active' : ''}`} onClick={() => setCalcMode('date')}>
             <span className="mico">📅</span>Target Date
+            <span className="mode-sub">Set a deadline</span>
           </button>
         </div>
         {calcMode === 'weight' && (
