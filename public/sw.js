@@ -1,4 +1,4 @@
-const CACHE = 'weightcast-v4';
+const CACHE = 'weightcast-v5';
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -34,11 +34,15 @@ self.addEventListener('fetch', e => {
   }
 });
 
-// Remove old caches on activation
+// Remove old caches on activation, then tell all clients to reload
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    ).then(() => self.clients.claim()).then(() =>
+      self.clients.matchAll({ type: 'window' }).then(clients =>
+        clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }))
+      )
+    )
   );
 });
